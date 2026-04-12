@@ -214,8 +214,9 @@ jobs:
       - name: Pre-deployment health check
         id: pre_check
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://uploaderapi.dontkillme.lol/v1/api/ping || echo "000")
-          RESPONSE_TIME=$(curl -s -o /dev/null -w "%{time_total}" --max-time 10 https://uploaderapi.dontkillme.lol/v1/api/ping || echo "0")
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://uploaderapi.dontkillme
+          .lol/v1/api/public/ping || echo "000")
+          RESPONSE_TIME=$(curl -s -o /dev/null -w "%{time_total}" --max-time 10 https://uploaderapi.dontkillme.lol/v1/api/public/ping || echo "0")
 
           echo "pre_status=$STATUS" >> $GITHUB_OUTPUT
           echo "pre_response_time=$RESPONSE_TIME" >> $GITHUB_OUTPUT
@@ -370,7 +371,7 @@ jobs:
           STATUS="000"
 
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://uploaderapi.dontkillme.lol/v1/api/ping || echo "000")
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://uploaderapi.dontkillme.lol/v1/api/public/ping || echo "000")
 
             if [ "$STATUS" = "200" ]; then
               echo "Health check passed (attempt $((RETRY_COUNT + 1)))"
@@ -405,7 +406,7 @@ jobs:
           PROCESS_CPU=$(ps -o %cpu= -C server 2>/dev/null | awk '{sum+=$1} END {printf "%.1f%%", sum}')
           LOAD_AVG=$(uptime | awk -F'load average:' '{print $2}' | sed 's/^[ \t]*//')
           CONNECTIONS=$(ss -tn state established '( dport = :443 or sport = :443 )' | wc -l)
-          RESPONSE_TIME=$(curl -s -o /dev/null -w "%{time_total}" --max-time 5 https://uploaderapi.dontkillme.lol/v1/api/ping || echo "0")
+          RESPONSE_TIME=$(curl -s -o /dev/null -w "%{time_total}" --max-time 5 https://uploaderapi.dontkillme.lol/v1/api/public/ping || echo "0")
           DEPLOYED_VERSION=$(cat $DEPLOY_PATH/VERSION 2>/dev/null || echo "unknown")
           END_TIME=$(date +%s)
           DEPLOY_DURATION=$((END_TIME - START_TIME))
@@ -448,15 +449,15 @@ jobs:
       - name: Post-deployment smoke tests
         id: smoke_tests
         run: |
-          PING_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://uploaderapi.dontkillme.lol/v1/api/ping)
+          PING_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://uploaderapi.dontkillme.lol/v1/api/public/ping)
           echo "ping_test=$PING_STATUS" >> $GITHUB_OUTPUT
 
-          RESPONSE_TIME=$(curl -s -o /dev/null -w "%{time_total}" --max-time 10 https://uploaderapi.dontkillme.lol/v1/api/ping)
+          RESPONSE_TIME=$(curl -s -o /dev/null -w "%{time_total}" --max-time 10 https://uploaderapi.dontkillme.lol/v1/api/public/ping)
           echo "response_time_test=${RESPONSE_TIME}s" >> $GITHUB_OUTPUT
 
           SUCCESS_COUNT=0
           for i in {1..10}; do
-            if [ "$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://uploaderapi.dontkillme.lol/v1/api/ping)" = "200" ]; then
+            if [ "$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://uploaderapi.dontkillme.lol/v1/api/public/ping)" = "200" ]; then
               SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
             fi
             sleep 0.2
