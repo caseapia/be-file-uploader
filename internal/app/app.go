@@ -103,7 +103,7 @@ func CreateApp() (app *fiber.App, db *database.Database, err error) {
 	}
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:8080"},
+		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:8080", "https://uploader.dontkillme.lol"},
 		AllowHeaders:     []string{"Origin, Content-Type, Accept, Authorization, Cache-Control, X-Request-Fingerprint, X-User-Agent"},
 		AllowMethods:     []string{"GET, POST, PUT, DELETE, PATCH, OPTIONS"},
 		AllowCredentials: true,
