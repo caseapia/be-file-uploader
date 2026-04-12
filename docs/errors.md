@@ -158,5 +158,3 @@ switch (error.code) {
 - Refresh failure paths are not yet cleanly classified.
 - Middleware permission denials often use Fiber's generic `Forbidden` message rather than a project-specific error code.
 - Some malformed JWT errors may leak library messages instead of normalized API codes.
-
-For an open-source project, these details are worth calling out explicitly so integrators know what to expect from the current implementation.
