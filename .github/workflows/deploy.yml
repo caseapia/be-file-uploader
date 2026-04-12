@@ -234,10 +234,9 @@ jobs:
           echo "=== Deployment completed ==="
           ENDSSH
 
-          # Сохраняем вывод в GitHub Output
-          while IFS='=' read -r key value; do
-            echo "${key}=${value}" >> $GITHUB_OUTPUT
-          done < /tmp/deploy_output.txt
+          grep '=' /tmp/deploy_output.txt | while IFS='=' read -r key value; do
+          echo "${key}=${value}" >> $GITHUB_OUTPUT
+          done
 
       - name: Post-deployment smoke tests
         id: smoke_tests
