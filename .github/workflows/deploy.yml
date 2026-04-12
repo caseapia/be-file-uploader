@@ -174,7 +174,6 @@ jobs:
         env:
           PORT: ${{ env.SSH_PORT }}
         run: |
-          # ВАЖНО: SCP использует БОЛЬШУЮ -P
           scp -P $PORT -i ~/.ssh/deploy_key \
             ${{ env.BINARY_NAME }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/server-new
 
@@ -187,8 +186,7 @@ jobs:
           ROLLBACK_MODE="${{ github.event.inputs.rollback }}"
           DEBUG_MODE="${{ github.event.inputs.debug }}"
           CURRENT_SHA="${{ steps.version.outputs.current_sha }}"
-
-          # ВАЖНО: SSH использует маленькую -p
+          
           if ! ssh -p $PORT -i ~/.ssh/deploy_key \
               -o ConnectTimeout=10 \
               ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
@@ -196,19 +194,19 @@ jobs:
             echo "SSH connection failed!"
             exit 1
           fi
-
+          
           ssh -p $PORT -i ~/.ssh/deploy_key \
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
             "bash -s $ROLLBACK_MODE $DEBUG_MODE $CURRENT_SHA" << 'ENDSSH' > /tmp/deploy_output.txt 2>&1
-
+          
           ROLLBACK_MODE=$1
           DEBUG_MODE=$2
           CURRENT_SHA=$3
           DEPLOY_PATH=/opt/be-file-uploader
-
+          
           echo "=== Deployment started on port 2222 ==="
           sudo systemctl stop file-uploader
-
+          
           if [ "$ROLLBACK_MODE" = "true" ]; then
             if [ -f $DEPLOY_PATH/bin/server.bak ]; then
               mv $DEPLOY_PATH/bin/server.bak $DEPLOY_PATH/bin/server
@@ -221,22 +219,24 @@ jobs:
             chmod 750 $DEPLOY_PATH/bin/server
             echo "$CURRENT_SHA" > $DEPLOY_PATH/VERSION
           fi
-
+          
           sudo systemctl start file-uploader
           sleep 5
           
-          # Метрики для отчета
           CPU_LOAD=$(top -bn1 | grep "Cpu(s)" | awk '{print $2 + $4"%"}')
           MEM_USAGE=$(free -m | awk '/Mem:/ { printf "%d/%dMB", $3, $2 }')
+          
           echo "cpu_load=$CPU_LOAD"
           echo "mem_usage=$MEM_USAGE"
           echo "deployment_type=deploy"
           echo "=== Deployment completed ==="
           ENDSSH
-
-          grep '=' /tmp/deploy_output.txt | while IFS='=' read -r key value; do
-          echo "${key}=${value}" >> $GITHUB_OUTPUT
-          done
+          
+          while IFS='=' read -r key value; do
+            if [[ -n "$key" && -n "$value" && "$key" =~ ^[a-zA-Z0-9_]+$ ]]; then
+              echo "${key}=${value}" >> $GITHUB_OUTPUT
+            fi
+          done < /tmp/deploy_output.txt
 
       - name: Post-deployment smoke tests
         id: smoke_tests
