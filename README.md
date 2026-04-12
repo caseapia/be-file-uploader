@@ -2,6 +2,8 @@
 
 `be-file-uploader` is a Go/Fiber backend that provides invite-based registration, JWT authentication with rotating refresh tokens, user/profile endpoints, invite administration, and image upload flows backed by object storage.
 
+# If you want to contribute in frontend use [this](https://github.com/caseapia/fe-file-uploader) repository 
+
 ## Features
 
 - Invite-only user registration
@@ -48,4 +50,4 @@ The collection includes:
 
 ## Open-Source Notes
 
-The documentation intentionally calls out a few current implementation caveats so contributors and frontend integrators can work against the real behavior of the service today, not only the intended behavior.
+The documentation intentionally calls out a few current implementation caveats so contributors and [frontend](https://github.com/caseapia/fe-file-uploader) integrators can work against the real behavior of the service today, not only the intended behavior.
