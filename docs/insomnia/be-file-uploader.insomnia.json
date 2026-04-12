@@ -1,0 +1,562 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-04-12T00:00:00.000Z",
+  "__export_source": "be-file-uploader.openapi-docs",
+  "resources": [
+    {
+      "_id": "wrk_bfup_001",
+      "_type": "workspace",
+      "name": "be-file-uploader",
+      "description": "REST API workspace for auth, user, invite, and storage flows. Import into Insomnia and select an environment before sending requests.",
+      "scope": "collection"
+    },
+    {
+      "_id": "env_bfup_base",
+      "_type": "environment",
+      "parentId": "wrk_bfup_001",
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:8080",
+        "x_user_agent": "Insomnia/be-file-uploader",
+        "access_token": "",
+        "refresh_token": "",
+        "username": "demo_user",
+        "password": "secret12",
+        "invite_code": "ABC12D",
+        "invite_id": 1,
+        "current_user_id": 1,
+        "lookup_user_id": 1,
+        "image_id": 1,
+        "image_url": "",
+        "image_owner_id": 1,
+        "image_file_path": "",
+        "notes": "Set image_file_path to a local image path before calling upload."
+      },
+      "dataPropertyOrder": {
+        "&": [
+          "base_url",
+          "x_user_agent",
+          "access_token",
+          "refresh_token",
+          "username",
+          "password",
+          "invite_code",
+          "invite_id",
+          "current_user_id",
+          "lookup_user_id",
+          "image_id",
+          "image_url",
+          "image_owner_id",
+          "image_file_path",
+          "notes"
+        ]
+      },
+      "color": "#5b8def",
+      "isPrivate": false,
+      "metaSortKey": 0
+    },
+    {
+      "_id": "env_bfup_local",
+      "_type": "environment",
+      "parentId": "env_bfup_base",
+      "name": "Local",
+      "data": {
+        "base_url": "http://localhost:8080"
+      },
+      "dataPropertyOrder": {
+        "&": [
+          "base_url"
+        ]
+      },
+      "color": "#4caf50",
+      "isPrivate": false,
+      "metaSortKey": 1
+    },
+    {
+      "_id": "env_bfup_staging",
+      "_type": "environment",
+      "parentId": "env_bfup_base",
+      "name": "Staging",
+      "data": {
+        "base_url": "https://staging.example.com",
+        "username": "",
+        "password": "",
+        "invite_code": ""
+      },
+      "dataPropertyOrder": {
+        "&": [
+          "base_url",
+          "username",
+          "password",
+          "invite_code"
+        ]
+      },
+      "color": "#ff9800",
+      "isPrivate": false,
+      "metaSortKey": 2
+    },
+    {
+      "_id": "env_bfup_prod",
+      "_type": "environment",
+      "parentId": "env_bfup_base",
+      "name": "Production",
+      "data": {
+        "base_url": "https://api.example.com",
+        "username": "",
+        "password": "",
+        "invite_code": ""
+      },
+      "dataPropertyOrder": {
+        "&": [
+          "base_url",
+          "username",
+          "password",
+          "invite_code"
+        ]
+      },
+      "color": "#f44336",
+      "isPrivate": false,
+      "metaSortKey": 3
+    },
+    {
+      "_id": "fld_auth",
+      "_type": "request_group",
+      "parentId": "wrk_bfup_001",
+      "name": "Public Auth",
+      "description": "Register, login, and refresh flows. Successful responses automatically persist access and refresh tokens into the active environment.",
+      "environment": {},
+      "metaSortKey": -5000
+    },
+    {
+      "_id": "fld_user",
+      "_type": "request_group",
+      "parentId": "wrk_bfup_001",
+      "name": "Private User",
+      "description": "Authenticated user routes. Uses Bearer token from the active environment.",
+      "environment": {},
+      "metaSortKey": -4000
+    },
+    {
+      "_id": "fld_invite",
+      "_type": "request_group",
+      "parentId": "wrk_bfup_001",
+      "name": "Private Invite Admin",
+      "description": "Requires MANAGE_USERS permission. Invite IDs and generated invite codes are automatically saved back into the environment.",
+      "environment": {},
+      "metaSortKey": -3000
+    },
+    {
+      "_id": "fld_storage",
+      "_type": "request_group",
+      "parentId": "wrk_bfup_001",
+      "name": "Private Storage",
+      "description": "Authenticated storage routes. Upload saves image metadata to the environment for follow-up list/delete calls.",
+      "environment": {},
+      "metaSortKey": -2000
+    },
+    {
+      "_id": "fld_image_admin",
+      "_type": "request_group",
+      "parentId": "wrk_bfup_001",
+      "name": "Private Image Admin",
+      "description": "Requires VIEW_OTHER_FILES permission.",
+      "environment": {},
+      "metaSortKey": -1000
+    },
+    {
+      "_id": "req_register",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "Register",
+      "method": "POST",
+      "url": "{{ _.base_url }}/v1/api/public/auth/register",
+      "description": "Registers a new user by invite code and returns user plus access/refresh tokens.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"username\": \"{{ _.username }}\",\n  \"password\": \"{{ _.password }}\",\n  \"invite_code\": \"{{ _.invite_code }}\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -3000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "afterResponseScript": "const body = await insomnia.response.json();\nconst data = body && body.response;\nif (data?.access_token) await insomnia.environment.set('access_token', data.access_token);\nif (data?.refresh_token) await insomnia.environment.set('refresh_token', data.refresh_token);\nif (data?.user?.id) {\n  await insomnia.environment.set('current_user_id', data.user.id);\n  await insomnia.environment.set('lookup_user_id', data.user.id);\n}\nif (data?.user?.username) await insomnia.environment.set('username', data.user.username);\nconsole.log('[auth] register response processed');\n"
+    },
+    {
+      "_id": "req_login",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "Login",
+      "method": "POST",
+      "url": "{{ _.base_url }}/v1/api/public/auth/login",
+      "description": "Authenticates a user and stores returned tokens in the active environment.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"username\": \"{{ _.username }}\",\n  \"password\": \"{{ _.password }}\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -2000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "afterResponseScript": "const body = await insomnia.response.json();\nconst data = body && body.response;\nif (data?.access_token) await insomnia.environment.set('access_token', data.access_token);\nif (data?.refresh_token) await insomnia.environment.set('refresh_token', data.refresh_token);\nif (data?.user?.id) {\n  await insomnia.environment.set('current_user_id', data.user.id);\n  await insomnia.environment.set('lookup_user_id', data.user.id);\n}\nconsole.log('[auth] login response processed');\n"
+    },
+    {
+      "_id": "req_refresh",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "Refresh Tokens",
+      "method": "POST",
+      "url": "{{ _.base_url }}/v1/api/public/auth/refresh",
+      "description": "Rotates the refresh token and persists the new token pair.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"refresh_token\": \"{{ _.refresh_token }}\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "afterResponseScript": "const body = await insomnia.response.json();\nconst data = body && body.response;\nif (data?.access_token) await insomnia.environment.set('access_token', data.access_token);\nif (data?.refresh_token) await insomnia.environment.set('refresh_token', data.refresh_token);\nconsole.log('[auth] refresh response processed');\n"
+    },
+    {
+      "_id": "req_me",
+      "_type": "request",
+      "parentId": "fld_user",
+      "name": "Get My Profile",
+      "method": "GET",
+      "url": "{{ _.base_url }}/v1/api/private/user/me",
+      "description": "Returns the authenticated user and updates helper IDs in the environment.",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -2000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "afterResponseScript": "const body = await insomnia.response.json();\nconst data = body && body.response;\nif (data?.id) {\n  await insomnia.environment.set('current_user_id', data.id);\n  await insomnia.environment.set('lookup_user_id', data.id);\n}\nconsole.log('[user] profile response processed');\n"
+    },
+    {
+      "_id": "req_lookup_user",
+      "_type": "request",
+      "parentId": "fld_user",
+      "name": "Lookup User By ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/v1/api/private/user/lookup/{{ _.lookup_user_id }}",
+      "description": "Attempts user lookup by numeric ID. Current backend implementation is stricter than intended; check docs if this returns 403.",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true
+    },
+    {
+      "_id": "req_invite_list",
+      "_type": "request",
+      "parentId": "fld_invite",
+      "name": "List Invites",
+      "method": "GET",
+      "url": "{{ _.base_url }}/v1/api/private/invite/admin/list",
+      "description": "Lists all invites. Saves the first active invite ID and code for quick follow-up testing.",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -3000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "afterResponseScript": "const body = await insomnia.response.json();\nconst list = body && body.response;\nif (Array.isArray(list)) {\n  const active = list.find(item => item && item.is_active);\n  if (active?.id) await insomnia.environment.set('invite_id', active.id);\n  if (active?.code) await insomnia.environment.set('invite_code', active.code);\n}\nconsole.log('[invite] list response processed');\n"
+    },
+    {
+      "_id": "req_invite_create",
+      "_type": "request",
+      "parentId": "fld_invite",
+      "name": "Create Invite",
+      "method": "POST",
+      "url": "{{ _.base_url }}/v1/api/private/invite/admin/create",
+      "description": "Creates a new invite code and persists it into invite_code.",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -2000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "afterResponseScript": "const body = await insomnia.response.json();\nconst code = body && body.response;\nif (typeof code === 'string' && code.length === 6) {\n  await insomnia.environment.set('invite_code', code);\n}\nconsole.log('[invite] create response processed');\n"
+    },
+    {
+      "_id": "req_invite_revoke",
+      "_type": "request",
+      "parentId": "fld_invite",
+      "name": "Revoke Invite",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/v1/api/private/invite/admin/revoke",
+      "description": "Revokes an invite by ID from the active environment.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"invite_id\": {{ _.invite_id }}\n}"
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true
+    },
+    {
+      "_id": "req_upload_image",
+      "_type": "request",
+      "parentId": "fld_storage",
+      "name": "Upload Image",
+      "method": "POST",
+      "url": "{{ _.base_url }}/v1/api/private/storage/upload",
+      "description": "Uploads one image from image_file_path. Accepted MIME types: jpeg, png, webp, gif. Max size: 10 MiB.",
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          {
+            "id": "pair_upload_image",
+            "name": "image",
+            "type": "file",
+            "fileName": "{{ _.image_file_path }}"
+          }
+        ]
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -3000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "afterResponseScript": "const body = await insomnia.response.json();\nconst data = body && body.response;\nif (data?.id) await insomnia.environment.set('image_id', data.id);\nif (data?.url) await insomnia.environment.set('image_url', data.url);\nif (data?.uploader?.id) await insomnia.environment.set('image_owner_id', data.uploader.id);\nconsole.log('[storage] upload response processed');\n"
+    },
+    {
+      "_id": "req_delete_image",
+      "_type": "request",
+      "parentId": "fld_storage",
+      "name": "Delete Image",
+      "method": "POST",
+      "url": "{{ _.base_url }}/v1/api/private/storage/delete",
+      "description": "Deletes the image referenced by image_id. Current backend implementation is stricter than a typical owner-delete flow; see docs if this returns 403.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"image_id\": {{ _.image_id }}\n}"
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -2000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true
+    },
+    {
+      "_id": "req_my_images",
+      "_type": "request",
+      "parentId": "fld_storage",
+      "name": "List My Images",
+      "method": "GET",
+      "url": "{{ _.base_url }}/v1/api/private/storage/my",
+      "description": "Lists the authenticated user's images. Requires VIEW_OWN_FILES.",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "afterResponseScript": "const body = await insomnia.response.json();\nconst data = body && body.response;\nif (Array.isArray(data) && data.length > 0) {\n  const first = data[0];\n  if (first?.id) await insomnia.environment.set('image_id', first.id);\n  if (first?.url) await insomnia.environment.set('image_url', first.url);\n  if (first?.uploader?.id) await insomnia.environment.set('image_owner_id', first.uploader.id);\n}\nconsole.log('[storage] my images response processed');\n"
+    },
+    {
+      "_id": "req_admin_all_images",
+      "_type": "request",
+      "parentId": "fld_image_admin",
+      "name": "List All Images",
+      "method": "GET",
+      "url": "{{ _.base_url }}/v1/api/private/image/admin/list",
+      "description": "Lists all images. Requires VIEW_OTHER_FILES.",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -2000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "afterResponseScript": "const body = await insomnia.response.json();\nconst data = body && body.response;\nif (Array.isArray(data) && data.length > 0) {\n  const first = data[0];\n  if (first?.id) await insomnia.environment.set('image_id', first.id);\n  if (first?.url) await insomnia.environment.set('image_url', first.url);\n  if (first?.uploader?.id) await insomnia.environment.set('image_owner_id', first.uploader.id);\n}\nconsole.log('[image-admin] all images response processed');\n"
+    },
+    {
+      "_id": "req_admin_images_by_user",
+      "_type": "request",
+      "parentId": "fld_image_admin",
+      "name": "List Images By User ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/v1/api/private/image/admin/list/{{ _.image_owner_id }}",
+      "description": "Lists images for image_owner_id. Requires VIEW_OTHER_FILES.",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "afterResponseScript": "const body = await insomnia.response.json();\nconst data = body && body.response;\nif (Array.isArray(data) && data.length > 0) {\n  const first = data[0];\n  if (first?.id) await insomnia.environment.set('image_id', first.id);\n  if (first?.url) await insomnia.environment.set('image_url', first.url);\n}\nconsole.log('[image-admin] images by user response processed');\n"
+    }
+  ]
+}
