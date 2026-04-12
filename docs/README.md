@@ -10,14 +10,14 @@ This folder contains developer-facing and frontend-facing documentation for `be-
 
 ## Documents
 
-| File | Purpose |
-| --- | --- |
-| [getting-started.md](getting-started.md) | Local setup, required infrastructure, environment variables, runtime flags, and first-run workflow |
-| [api-reference.md](api-reference.md) | Full route catalog, request/response contracts, auth rules, and frontend notes per endpoint |
-| [authentication.md](authentication.md) | JWT + refresh-token flow, session model, browser/API-client integration guidance |
-| [errors.md](errors.md) | Response envelope, validation behavior, known error codes, and frontend error-handling guidance |
-| [architecture.md](architecture.md) | Project structure, request flow, persistence model, permissions, and known implementation caveats |
-| [insomnia/be-file-uploader.insomnia.json](insomnia/be-file-uploader.insomnia.json) | Importable Insomnia collection with environments, auth automation, and storage route helpers |
+| File                                                                               | Purpose                                                                                            |
+|------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
+| [getting-started.md](getting-started.md)                                           | Local setup, required infrastructure, environment variables, runtime flags, and first-run workflow |
+| [api-reference.md](api-reference.md)                                               | Full route catalog, request/response contracts, auth rules, and frontend notes per endpoint        |
+| [authentication.md](authentication.md)                                             | JWT + refresh-token flow, session model, browser/API-client integration guidance                   |
+| [errors.md](errors.md)                                                             | Response envelope, validation behavior, known error codes, and frontend error-handling guidance    |
+| [architecture.md](architecture.md)                                                 | Project structure, request flow, persistence model, permissions, and known implementation caveats  |
+| [insomnia/be-file-uploader.insomnia.json](insomnia/be-file-uploader.insomnia.json) | Importable Insomnia collection with environments, auth automation, and storage route helpers       |
 
 ## What This Service Does
 
@@ -34,12 +34,12 @@ This folder contains developer-facing and frontend-facing documentation for `be-
 
 Base prefix: `/v1/api`
 
-| Scope | Routes |
-| --- | --- |
-| Public | `POST /public/auth/register`, `POST /public/auth/login`, `POST /public/auth/refresh` |
-| Private user | `GET /private/user/me`, `GET /private/user/lookup/:id` |
-| Private storage | `POST /private/storage/upload`, `POST /private/storage/delete`, `GET /private/storage/my` |
-| Private admin | `GET /private/invite/admin/list`, `POST /private/invite/admin/create`, `DELETE /private/invite/admin/revoke`, `GET /private/image/admin/list`, `GET /private/image/admin/list/:id` |
+| Scope           | Routes                                                                                                                                                                             |
+|-----------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Public          | `POST /public/auth/register`, `POST /public/auth/login`, `POST /public/auth/refresh`                                                                                               |
+| Private user    | `GET /private/user/me`, `GET /private/user/lookup/:id`                                                                                                                             |
+| Private storage | `POST /private/storage/upload`, `POST /private/storage/delete`, `GET /private/storage/my`                                                                                          |
+| Private admin   | `GET /private/invite/admin/list`, `POST /private/invite/admin/create`, `DELETE /private/invite/admin/revoke`, `GET /private/image/admin/list`, `GET /private/image/admin/list/:id` |
 
 ## Response Conventions
 

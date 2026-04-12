@@ -12,12 +12,12 @@ The API uses a two-token model backed by a persistent session row:
 
 Current access-token properties:
 
-| Property | Value |
-| --- | --- |
-| Algorithm | `HS256` |
-| Secret source | `JWT_SECRET` |
-| Lifetime | `15 minutes` |
-| Claims | `sub`, `sid`, `tv`, `iat`, `exp` |
+| Property      | Value                            |
+|---------------|----------------------------------|
+| Algorithm     | `HS256`                          |
+| Secret source | `JWT_SECRET`                     |
+| Lifetime      | `15 minutes`                     |
+| Claims        | `sub`, `sid`, `tv`, `iat`, `exp` |
 
 Meaning of claims:
 
