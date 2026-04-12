@@ -45,7 +45,10 @@ func Middleware(auth *auth.Service, repo *mysql.Repository) fiber.Handler {
 			return err
 		}
 
-		user, err = repo.UpdateUser(ctx, repo.DB, &models.User{ID: user.ID, LastIP: ip}, "last_ip")
+		_, err = repo.UpdateUser(ctx, repo.DB, &models.User{ID: user.ID, LastIP: ip}, "last_ip")
+		if err != nil {
+			return err
+		}
 
 		session, err := repo.SearchSessionByID(ctx, claims.SessionID)
 		if err != nil {

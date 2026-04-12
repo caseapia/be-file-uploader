@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"log"
+
 	"be-file-uploader/internal/models"
 	"be-file-uploader/pkg/enums/role"
 
@@ -11,11 +13,12 @@ func RequirePermission(permission role.Permission) fiber.Handler {
 	return func(ctx fiber.Ctx) error {
 		user, ok := ctx.Locals("user").(*models.User)
 		if !ok {
-			return fiber.ErrUnauthorized
+			return fiber.NewError(fiber.StatusUnauthorized, "ERR_UNAUTHORIZED")
 		}
+		log.Printf("user: %+v, roles: %+v", user.ID, user.Roles)
 
 		if !user.HasPermission(permission) {
-			return fiber.ErrForbidden
+			return fiber.NewError(fiber.StatusForbidden, "ERR_NO_ACCESS")
 		}
 
 		return ctx.Next()

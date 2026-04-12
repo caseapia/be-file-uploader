@@ -144,7 +144,7 @@ func (s *Service) DeleteImage(ctx fiber.Ctx, imageID int, requester *models.User
 		return fiber.NewError(fiber.StatusNotFound, "ERR_IMAGE_NOTFOUND")
 	}
 
-	if image.UploadedBy != requester.ID || !requester.HasPermission(role.ManageFiles) {
+	if image.UploadedBy != requester.ID && !requester.HasPermission(role.ManageFiles) {
 		return fiber.NewError(fiber.StatusForbidden, "ERR_IMAGE_FORBIDDEN")
 	}
 

@@ -1,8 +1,14 @@
 package models
 
-import "be-file-uploader/internal/models/relations"
+import (
+	"be-file-uploader/internal/models/relations"
+
+	"github.com/uptrace/bun"
+)
 
 type Image struct {
+	bun.BaseModel `bun:"table:images,alias:i"`
+
 	ID           int            `bun:"id,pk,autoincrement" json:"id"`
 	R2Key        string         `bun:"r2_key,unique" json:"-"`
 	URL          string         `bun:"url" json:"url"`
