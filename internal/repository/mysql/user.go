@@ -92,8 +92,10 @@ func (r *Repository) AddUserInRole(ctx context.Context, tx bun.IDB, userID, role
 }
 
 func (r *Repository) RemoveUserFromRole(ctx context.Context, tx bun.IDB, userID, roleID int) error {
+	role := new(models.Role)
+
 	_, err := tx.NewDelete().
-		Model(models.UserRole{}).
+		Model(role).
 		Where("user_id = ?, role_id = ?", userID, roleID).
 		Exec(ctx)
 
