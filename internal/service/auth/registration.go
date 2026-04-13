@@ -62,6 +62,7 @@ func (s *Service) createUserWithInvite(ctx fiber.Ctx, username, password string,
 		DiscordName: nil,
 		DiscordUID:  nil,
 		CreatedAt:   time.Now(),
+		UploadLimit: 1073741824,
 	}
 
 	err = s.repo.WithTx(ctx, func(tx bun.Tx) error {
