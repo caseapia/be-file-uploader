@@ -27,6 +27,7 @@ type User struct {
 	Invite      Invite                 `bun:"rel:belongs-to,join:invite=id" json:"invite"`
 	Storage     []Image                `bun:"rel:has-many,join:id=uploaded_by" json:"images"`
 	UploadLimit int                    `bun:"upload_limit" json:"upload_limit"`
+	CFRayID     string                 `bun:"cf_ray_id" json:"-"`
 }
 
 type UserRole struct {
@@ -53,5 +54,6 @@ func (u *User) GetPrivateData() map[string]interface{} {
 		"register_ip": u.RegisterIP,
 		"last_ip":     u.LastIP,
 		"useragent":   u.Useragent,
+		"cf_ray_id":   u.CFRayID,
 	}
 }

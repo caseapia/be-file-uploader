@@ -49,13 +49,14 @@ func Middleware(auth *auth.Service, repo *mysql.Repository) fiber.Handler {
 
 		ip := ctx.IP()
 		useragent := ctx.Get("X-User-Agent")
+		rayid := ctx.Get("Cf-Ray")
 
 		user, claims, err := auth.ParseJWT(token)
 		if err != nil {
 			return err
 		}
 
-		_, err = repo.UpdateUser(ctx.Context(), repo.DB, &models.User{ID: user.ID, LastIP: ip, Useragent: useragent}, "last_ip", "useragent")
+		_, err = repo.UpdateUser(ctx.Context(), repo.DB, &models.User{ID: user.ID, LastIP: ip, Useragent: useragent, CFRayID: rayid}, "last_ip", "useragent", "cf_ray_id")
 		if err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, "ERR_DATABASE_UPDATE")
 		}
