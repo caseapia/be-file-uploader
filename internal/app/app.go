@@ -51,7 +51,7 @@ func CreateApp() (app *fiber.App, db *database.Database, err error) {
 		ReadTimeout:   10 * time.Second,
 		WriteTimeout:  10 * time.Second,
 		IdleTimeout:   30 * time.Second,
-		ProxyHeader:   fiber.HeaderXForwardedFor,
+		ProxyHeader:   "CF-Connecting-IP",
 		GETOnly:       false,
 		ErrorHandler: func(c fiber.Ctx, err error) error {
 			var e *fiber.Error
