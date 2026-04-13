@@ -16,6 +16,8 @@ func (r *Repository) LookupUserByName(ctx context.Context, name string) (*models
 		Where("username = ?", name).
 		Relation("Roles").
 		Relation("Invite").
+		Relation("Storage").
+		Relation("Storage.Uploader").
 		Limit(1).
 		Scan(ctx)
 	return user, err
@@ -29,10 +31,26 @@ func (r *Repository) LookupUserByID(ctx context.Context, id int) (*models.User, 
 		Where("user.id = ?", id).
 		Relation("Roles").
 		Relation("Invite").
+		Relation("Storage").
+		Relation("Storage.Uploader").
 		Limit(1).
 		Scan(ctx)
 
 	return user, err
+}
+
+func (r *Repository) LookupUsers(ctx context.Context, limit int) ([]models.User, error) {
+	users := make([]models.User, 0)
+
+	err := r.DB.NewSelect().
+		Model(&users).
+		Relation("Roles").
+		Relation("Invite").
+		Relation("Storage").
+		Relation("Storage.Uploader").
+		Limit(limit).
+		Scan(ctx)
+	return users, err
 }
 
 func (r *Repository) UpdateUser(ctx context.Context, tx bun.IDB, user *models.User, columns ...string) (updatedUser *models.User, err error) {

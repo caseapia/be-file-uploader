@@ -10,6 +10,8 @@ func (h *Handler) RegisterPublicRoutes(router fiber.Router) {
 	group.Post("/refresh", h.Refresh)
 }
 
-func (h *Handler) RegisterPrivateRoutes(_ fiber.Router) {
+func (h *Handler) RegisterPrivateRoutes(router fiber.Router) {
+	group := router.Group("/auth")
 
+	group.Delete("/logout", h.Logout)
 }

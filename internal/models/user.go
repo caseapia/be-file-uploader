@@ -11,19 +11,22 @@ import (
 type User struct {
 	bun.BaseModel `bun:"table:users"`
 
-	ID          int       `bun:"id,pk,autoincrement,unique" json:"id"`
-	Username    string    `bun:"username,unique" json:"username"`
-	DiscordUID  *int      `bun:"discord_uid,unique" json:"discord_uid"`
-	DiscordName *string   `bun:"discord_name" json:"discord_name"`
-	Password    string    `bun:"password" json:"-"`
-	CreatedAt   time.Time `bun:"created_at,default:current_timestamp" json:"created_at"`
-	UpdatedAt   time.Time `bun:"updated_at,nullzero" json:"updated_at"`
-	Roles       []Role    `bun:"m2m:user_roles,join:User=Role" json:"roles"`
-	RegisterIP  string    `bun:"register_ip" json:"-"`
-	LastIP      string    `bun:"last_ip" json:"-"`
-	Useragent   string    `bun:"useragent" json:"-"`
-	InviteID    int       `bun:"invite" json:"-"`
-	Invite      Invite    `bun:"rel:belongs-to,join:invite=id" json:"invite"`
+	ID          int                    `bun:"id,pk,autoincrement,unique" json:"id"`
+	Username    string                 `bun:"username,unique" json:"username"`
+	DiscordUID  *int                   `bun:"discord_uid,unique" json:"discord_uid"`
+	DiscordName *string                `bun:"discord_name" json:"discord_name"`
+	Password    string                 `bun:"password" json:"-"`
+	CreatedAt   time.Time              `bun:"created_at,default:current_timestamp" json:"created_at"`
+	UpdatedAt   time.Time              `bun:"updated_at,nullzero" json:"updated_at"`
+	Roles       []Role                 `bun:"m2m:user_roles,join:User=Role" json:"roles"`
+	RegisterIP  string                 `bun:"register_ip" json:"-"`
+	LastIP      string                 `bun:"last_ip" json:"-"`
+	Useragent   string                 `bun:"useragent" json:"-"`
+	Private     map[string]interface{} `bun:"-" json:"private,omitempty"`
+	InviteID    int                    `bun:"invite" json:"-"`
+	Invite      Invite                 `bun:"rel:belongs-to,join:invite=id" json:"invite"`
+	Storage     []Image                `bun:"rel:has-many,join:id=uploaded_by" json:"images"`
+	UploadLimit int                    `bun:"upload_limit" json:"upload_limit"`
 }
 
 type UserRole struct {

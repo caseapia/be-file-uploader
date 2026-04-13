@@ -11,11 +11,13 @@ import (
 	"be-file-uploader/internal/handler/developer"
 	"be-file-uploader/internal/handler/image"
 	"be-file-uploader/internal/handler/invite"
+	"be-file-uploader/internal/handler/role"
 	"be-file-uploader/internal/handler/user"
 	"be-file-uploader/internal/repository/mysql"
 	authSrv "be-file-uploader/internal/service/auth"
 	storageSrv "be-file-uploader/internal/service/image"
 	inviteSrv "be-file-uploader/internal/service/invite"
+	rolesSrv "be-file-uploader/internal/service/role"
 	userSrv "be-file-uploader/internal/service/user"
 	r2 "be-file-uploader/pkg/storage"
 
@@ -115,7 +117,7 @@ func CreateApp() (app *fiber.App, db *database.Database, err error) {
 	authHandler := auth.NewHandler(authService)
 
 	userService := userSrv.NewService(webDB)
-	userHandler := user.NewHandler(userService)
+	userHandler := user.NewHandler(userService, webDB)
 
 	inviteService := inviteSrv.NewService(webDB)
 	inviteHandler := invite.NewHandler(inviteService, webDB)
@@ -124,6 +126,9 @@ func CreateApp() (app *fiber.App, db *database.Database, err error) {
 	storageHandler := image.NewHandler(storageService, webDB)
 
 	developerHandler := developer.NewHandler(webDB)
+
+	rolesService := rolesSrv.NewService(webDB)
+	rolesHandler := role.NewHandler(rolesService, webDB)
 
 	api := app.Group("/v1/api")
 	public := api.Group("/public")
@@ -135,6 +140,7 @@ func CreateApp() (app *fiber.App, db *database.Database, err error) {
 	userHandler.RegisterPrivateRoutes(private)
 	storageHandler.RegisterPrivateRoutes(private)
 	developerHandler.RegisterPublicRoutes(public)
+	rolesHandler.RegisterPrivateRoutes(private)
 
 	if *debug {
 		slog.Info("Registering routes...")

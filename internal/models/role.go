@@ -16,7 +16,7 @@ type Role struct {
 	Permissions []role.Permission `bun:"permissions,type:json" json:"permissions"`
 	IsSystem    bool              `bun:"is_system,default:false" json:"is_system"`
 	CreatedAt   time.Time         `bun:"created_at,default:current_timestamp" json:"created_at"`
-	CreatedBy   int               `bun:"created_by" json:"created_by"`
+	CreatedBy   int               `bun:"created_by" json:"-"`
 	Color       string            `bun:"color" json:"color"`
 }
 

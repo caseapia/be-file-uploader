@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"os"
 	"time"
 
 	"be-file-uploader/internal/models"
@@ -11,43 +12,56 @@ import (
 	"github.com/uptrace/bun"
 )
 
+var unhashedPassword string
+
 func (s *Service) validateRegistration(ctx fiber.Ctx, username, inviteCode string) (*models.Invite, error) {
 	user, err := s.repo.LookupUserByName(ctx, username)
 	if user != nil && err == nil {
 		return nil, fiber.NewError(fiber.StatusConflict, "ERR_USER_ALREADY_EXISTS")
 	}
 
-	invite, err := s.repo.SearchInviteByCode(ctx, inviteCode)
-	if err != nil {
-		return nil, fiber.NewError(fiber.StatusConflict, "ERR_INVITE_NOT_FOUND")
+	if os.Getenv("APP_MODE") != "DEV" {
+		invite, err := s.repo.SearchInviteByCode(ctx, inviteCode)
+		if err != nil {
+			return nil, fiber.NewError(fiber.StatusConflict, "ERR_INVITE_NOT_FOUND")
+		}
+
+		if !invite.IsActive {
+			return nil, fiber.NewError(fiber.StatusConflict, "ERR_INVITE_ALREADY_USED")
+		}
+
+		return invite, nil
 	}
 
-	if !invite.IsActive {
-		return nil, fiber.NewError(fiber.StatusConflict, "ERR_INVITE_ALREADY_USED")
-	}
-
-	return invite, nil
+	return nil, nil
 }
 
-func (s *Service) createUserWithInvite(ctx fiber.Ctx, username, password string, invite *models.Invite) (*models.User, error) {
+func (s *Service) createUserWithInvite(ctx fiber.Ctx, username, password string, invite *models.Invite) (user *models.User, err error) {
 	ip := ctx.IP()
 	useragent := ctx.Get("X-User-Agent")
 
 	hashPassword, err := generate.HashPassword(password)
+	unhashedPassword = password
 	if err != nil {
 		slog.WithData(slog.M{"error": err, "ip": ip}).Error("Password hashing failed")
 		return nil, fiber.NewError(fiber.StatusConflict, "ERR_USER_REGISTER_HASHCREATION")
 	}
 
-	user := &models.User{
+	var inviteID int
+	if invite != nil {
+		inviteID = invite.ID
+	}
+
+	user = &models.User{
 		Username:    username,
 		Password:    hashPassword,
 		RegisterIP:  ip,
+		LastIP:      ip,
 		Useragent:   useragent,
-		InviteID:    invite.ID,
-		CreatedAt:   time.Now(),
-		DiscordUID:  nil,
+		InviteID:    inviteID,
 		DiscordName: nil,
+		DiscordUID:  nil,
+		CreatedAt:   time.Now(),
 	}
 
 	err = s.repo.WithTx(ctx, func(tx bun.Tx) error {
@@ -72,10 +86,13 @@ func (s *Service) registerTx(ctx fiber.Ctx, tx bun.Tx, user *models.User, invite
 		return fiber.NewError(fiber.StatusConflict, "ERR_USER_UNKNOWN_CREATION_ERROR")
 	}
 
-	invite.UsedBy = &created.ID
-	if err := s.repo.UseInvite(ctx.Context(), tx, *invite); err != nil {
-		slog.WithData(slog.M{"error": err, "invite_id": invite.ID}).Error("Failed to mark invite as used")
-		return fiber.NewError(fiber.StatusConflict, "ERR_INVITE_MARK_ERR")
+	if invite != nil {
+		invite.UsedBy = &created.ID
+
+		if err := s.repo.UseInvite(ctx.Context(), tx, *invite); err != nil {
+			slog.WithData(slog.M{"error": err, "invite_id": invite.ID}).Error("Failed to mark invite as used")
+			return fiber.NewError(fiber.StatusConflict, "ERR_INVITE_MARK_ERR")
+		}
 	}
 
 	if err := s.repo.AddUserInRole(ctx, tx, created.ID, 1); err != nil {
@@ -94,7 +111,7 @@ func (s *Service) createSessionTokens(ctx fiber.Ctx, user *models.User) (access,
 		}
 	}(*user)
 
-	user, access, refresh, err = s.Login(ctx, user.Username, user.Password)
+	user, access, refresh, err = s.Login(ctx, user.Username, unhashedPassword)
 	if err != nil {
 		return "", "", err
 	}

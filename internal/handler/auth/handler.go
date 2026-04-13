@@ -3,6 +3,7 @@ package auth
 import (
 	"be-file-uploader/internal/models/requests"
 	"be-file-uploader/internal/service/auth"
+	"be-file-uploader/pkg/utils/account"
 	"be-file-uploader/pkg/utils/validation"
 
 	"github.com/gofiber/fiber/v3"
@@ -67,4 +68,16 @@ func (h *Handler) Refresh(ctx fiber.Ctx) error {
 		"access_token":  access,
 		"refresh_token": refresh,
 	})
+}
+
+func (h *Handler) Logout(ctx fiber.Ctx) error {
+	sessionData := account.GetSessionFromContext(ctx)
+	sender := account.GetUserFromContext(ctx)
+
+	err := h.authService.Logout(ctx, sessionData, sender)
+	if err != nil {
+		return err
+	}
+
+	return validation.Response(ctx, 200, "OK")
 }

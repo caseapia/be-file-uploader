@@ -141,3 +141,41 @@ func (s *Service) RefreshToken(ctx fiber.Ctx, refreshToken string) (access strin
 
 	return access, refresh, nil
 }
+
+func (s *Service) Logout(ctx fiber.Ctx, session *models.Session, user *models.User) error {
+	user, err := s.repo.LookupUserByID(ctx, user.ID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "ERR_USER_NOTFOUND")
+	}
+
+	if session.UserID != user.ID {
+		return fiber.NewError(fiber.StatusNotFound, "ERR_SESSION_NOTFOUND")
+	}
+	if !session.IsActive {
+		return fiber.NewError(fiber.StatusNotFound, "ERR_SESSION_NOTACTIVE")
+	}
+
+	session.IsActive = false
+	session.IPAddress = ctx.IP()
+	session.UserAgent = ctx.Get("X-User-Agent")
+	session.ExpiresAt = time.Now()
+
+	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) (err error) {
+		err = s.repo.UpdateSession(ctx, tx, session)
+		if err != nil {
+			slog.WithData(slog.M{
+				"error":   err,
+				"user":    session.UserID,
+				"session": session,
+			}).Error("Session update failed")
+			return fiber.NewError(fiber.StatusInternalServerError, "ERR_SESSION_UPDATE")
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
