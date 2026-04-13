@@ -47,7 +47,7 @@ func Middleware(auth *auth.Service, repo *mysql.Repository) fiber.Handler {
 			return fiber.NewError(fiber.StatusUnauthorized, "ERR_TOKEN_NOTFOUND")
 		}
 
-		ip := ctx.IP()
+		ip := ctx.Get("CF-Connecting-IP")
 		useragent := ctx.Get("X-User-Agent")
 		rayid := ctx.Get("Cf-Ray")
 

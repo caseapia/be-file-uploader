@@ -17,4 +17,6 @@ func (h *Handler) RegisterPrivateRoutes(router fiber.Router) {
 	groupAdmin.Get("/users", middleware.RequirePermission(role.ManageUsers), h.PopulateUserList)
 	groupAdmin.Put("/role/add", middleware.RequirePermission(role.ManageUsers), h.AddUserInRole)
 	groupAdmin.Delete("/role/delete", middleware.RequirePermission(role.ManageUsers), h.RemoveUserFromRole)
+	groupAdmin.Patch("/storage-limit/update", middleware.RequirePermission(role.ManageUsers), h.SetUploadLimit)
+	groupAdmin.Patch("/verify/:id", middleware.RequirePermission(role.ManageUsers), h.VerifyUser)
 }

@@ -104,3 +104,15 @@ func (h *Handler) RemoveUserFromRole(ctx fiber.Ctx) error {
 
 	return validation.Response(ctx, 200, u)
 }
+
+func (h *Handler) VerifyUser(ctx fiber.Ctx) error {
+	idStr := ctx.Params("id")
+	id, _ := strconv.Atoi(idStr)
+
+	u, err := h.userService.VerifyUser(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	return validation.Response(ctx, 200, u)
+}

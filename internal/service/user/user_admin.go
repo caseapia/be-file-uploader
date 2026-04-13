@@ -30,7 +30,7 @@ func (s *Service) searchAction(ctx fiber.Ctx, userID, roleID int) (user *models.
 	return user, role, nil
 }
 
-func (s *Service) SetUploadLimit(ctx fiber.Ctx, userID, newUploadLimit int) (user *models.User, err error) {
+func (s *Service) SetUploadLimit(ctx fiber.Ctx, userID int, newUploadLimit int64) (user *models.User, err error) {
 	user, err = s.repo.LookupUserByID(ctx.Context(), userID)
 	if err != nil {
 		return nil, fiber.NewError(fiber.StatusNotFound, "ERR_USER_NOTFOUND")
@@ -109,6 +109,28 @@ func (s *Service) DeleteUserFromRole(ctx fiber.Ctx, sender *models.User, userID,
 		}
 	}
 	user.Roles = user.Roles[:n]
+
+	return user, nil
+}
+
+func (s *Service) VerifyUser(ctx fiber.Ctx, userID int) (user *models.User, err error) {
+	user, err = s.repo.LookupUserByID(ctx.Context(), userID)
+	if err != nil {
+		return nil, fiber.NewError(fiber.StatusNotFound, "ERR_USER_NOTFOUND")
+	}
+	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) error {
+		if !user.IsVerified {
+			user.IsVerified = true
+		} else {
+			user.IsVerified = false
+		}
+		user, err = s.repo.UpdateUser(ctx, tx, user, "is_verified")
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
 
 	return user, nil
 }

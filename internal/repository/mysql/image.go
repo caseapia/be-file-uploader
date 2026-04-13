@@ -5,6 +5,7 @@ import (
 
 	"be-file-uploader/internal/models"
 
+	"github.com/gofiber/fiber/v3"
 	"github.com/uptrace/bun"
 )
 
@@ -13,6 +14,23 @@ func (r *Repository) CreateImage(ctx context.Context, tx bun.IDB, image *models.
 		Model(image).
 		Exec(ctx)
 	return err
+}
+
+func (r *Repository) ReserveDiskSpace(ctx context.Context, tx bun.Tx, user *models.User, size int64) error {
+	res, err := tx.NewUpdate().
+		Model((*models.User)(nil)).
+		Set("used_storage = used_storage + ?", size).
+		Where("id = ?", user.ID).
+		Where("used_storage + ? <= upload_limit", size).
+		Exec(ctx)
+	if err != nil {
+		return err
+	}
+	if rows, _ := res.RowsAffected(); rows == 0 {
+		return fiber.NewError(fiber.StatusNotFound, "ERR_QUOTA_EXCEEDED")
+	}
+
+	return nil
 }
 
 func (r *Repository) SearchImageByID(ctx context.Context, id int) (*models.Image, error) {

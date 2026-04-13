@@ -1,10 +1,10 @@
 package image
 
 import (
-	"fmt"
 	"mime/multipart"
 	"net/http"
 	"path"
+	"strconv"
 	"time"
 
 	"be-file-uploader/internal/models"
@@ -12,7 +12,6 @@ import (
 	"be-file-uploader/pkg/utils/generate"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/gookit/slog"
 	"github.com/uptrace/bun"
 )
 
@@ -25,113 +24,83 @@ var allowedMime = map[string]string{
 
 const maxFileSize = 10 << 20
 
-func (s *Service) UploadImage(ctx fiber.Ctx, uploader *models.User) (image *models.Image, err error) {
-	fileHeader, err := ctx.FormFile("image")
-	if err != nil {
-		slog.WithData(slog.M{
-			"fileHeader": fileHeader,
-			"err":        err,
-			"uploader":   uploader,
-		}).Error("Error uploading image")
-		return nil, fiber.NewError(fiber.StatusBadRequest, "ERR_IMAGE_MISSING")
+func (s *Service) validateUploadLimits(u *models.User, size int64) error {
+	if size > maxFileSize {
+		return fiber.NewError(fiber.StatusRequestEntityTooLarge, "ERR_IMAGE_TOO_LARGE")
 	}
+	if u.UsedStorage+size > u.UploadLimit {
+		return fiber.NewError(fiber.StatusRequestEntityTooLarge, "ERR_QUOTA_EXCEEDED")
+	}
+	return nil
+}
 
-	if fileHeader.Size > maxFileSize {
-		slog.WithData(slog.M{
-			"fileHeader":  fileHeader.Size,
-			"err":         err,
-			"maxFileSize": maxFileSize,
-		}).Error("Error uploading image (Image too large)")
-		return nil, fiber.NewError(fiber.StatusRequestEntityTooLarge, "ERR_IMAGE_TOO_LARGE")
-	}
-
-	file, err := fileHeader.Open()
+func (s *Service) processImageFile(fh *multipart.FileHeader) ([]byte, string, string, error) {
+	file, err := fh.Open()
 	if err != nil {
-		slog.WithData(slog.M{
-			"fileHeader": fileHeader,
-			"err":        err,
-		}).Error("Error open image")
-		return nil, fiber.NewError(fiber.StatusInternalServerError, "ERR_OPEN_IMAGE")
+		return nil, "", "", fiber.NewError(fiber.StatusInternalServerError, "ERR_OPEN_IMAGE")
 	}
-	defer func(file multipart.File) {
-		err := file.Close()
-		if err != nil {
-			slog.WithData(slog.M{
-				"fileHeader": fileHeader,
-				"err":        err,
-			}).Error("Error closing file")
-		}
-	}(file)
+	defer file.Close()
 
 	data, err := s.storage.ReadAll(file)
 	if err != nil {
-		slog.WithData(slog.M{
-			"fileHeader": fileHeader,
-			"data":       data,
-			"err":        err,
-		}).Error("Error reading file")
-		return nil, fiber.NewError(fiber.StatusInternalServerError, "ERR_FILE_READING")
+		return nil, "", "", fiber.NewError(fiber.StatusInternalServerError, "ERR_FILE_READING")
 	}
 
 	mimeType := http.DetectContentType(data)
 	ext, ok := allowedMime[mimeType]
 	if !ok {
-		slog.WithData(slog.M{
-			"fileHeader":  fileHeader,
-			"data":        data,
-			"mimeType":    mimeType,
-			"allowedMime": allowedMime,
-		})
-		return nil, fiber.NewError(fiber.StatusUnsupportedMediaType, "ERR_IMAGE_UNSUPPORTED_TYPE")
+		return nil, "", "", fiber.NewError(fiber.StatusUnsupportedMediaType, "ERR_IMAGE_UNSUPPORTED_TYPE")
 	}
 
-	imageID, err := generate.ImageID()
-	if err != nil {
-		return nil, fiber.NewError(fiber.StatusInternalServerError, "ERR_IMAGE_ID_GEN")
-	}
+	return data, mimeType, ext, nil
+}
 
-	// images/{userID}/{year-month}/{id}.ext
-	r2Key := path.Join(
+func (s *Service) generateStorageKey(userID int, imgID, ext string) string {
+	return path.Join(
 		"images",
-		fmt.Sprintf("%d", uploader.ID),
+		strconv.FormatInt(int64(userID), 10),
 		time.Now().Format("2006-01"),
-		imageID+ext,
+		imgID+ext,
 	)
+}
+
+func (s *Service) UploadImage(ctx fiber.Ctx, uploader *models.User) (*models.Image, error) {
+	fileHeader, err := ctx.FormFile("image")
+	if err != nil {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "ERR_IMAGE_MISSING")
+	}
+
+	if err := s.validateUploadLimits(uploader, fileHeader.Size); err != nil {
+		return nil, err
+	}
+
+	data, mimeType, ext, err := s.processImageFile(fileHeader)
+	if err != nil {
+		return nil, err
+	}
+
+	imageID, _ := generate.ImageID()
+	r2Key := s.generateStorageKey(uploader.ID, imageID, ext)
 
 	publicURL, err := s.storage.Upload(ctx.Context(), r2Key, mimeType, data)
 	if err != nil {
-		slog.WithData(slog.M{
-			"fileHeader": fileHeader,
-			"data":       data,
-			"mimeType":   mimeType,
-			"err":        err,
-		})
 		return nil, fiber.NewError(fiber.StatusInternalServerError, "ERR_IMAGE_UPLOAD")
 	}
 
-	image = &models.Image{
-		R2Key:        r2Key,
-		URL:          publicURL,
-		OriginalName: fileHeader.Filename,
-		MimeType:     mimeType,
-		Size:         fileHeader.Size,
-		UploadedBy:   uploader.ID,
+	image := &models.Image{
+		R2Key: r2Key, URL: publicURL, OriginalName: fileHeader.Filename,
+		MimeType: mimeType, Size: fileHeader.Size, UploadedBy: uploader.ID,
 	}
 
 	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) error {
-		if err = s.repo.CreateImage(ctx, tx, image); err != nil {
-			slog.WithData(slog.M{
-				"fileHeader": fileHeader,
-				"data":       data,
-				"mimeType":   mimeType,
-				"err":        err,
-			}).Error("Error creating image")
+		if err := s.repo.ReserveDiskSpace(ctx.Context(), tx, uploader, fileHeader.Size); err != nil {
 			return err
 		}
-
-		return nil
+		return s.repo.CreateImage(ctx, tx, image)
 	})
+
 	if err != nil {
+		_ = s.storage.Delete(ctx.Context(), r2Key)
 		return nil, err
 	}
 

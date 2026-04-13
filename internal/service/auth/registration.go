@@ -39,6 +39,7 @@ func (s *Service) validateRegistration(ctx fiber.Ctx, username, inviteCode strin
 func (s *Service) createUserWithInvite(ctx fiber.Ctx, username, password string, invite *models.Invite) (user *models.User, err error) {
 	ip := ctx.IP()
 	useragent := ctx.Get("X-User-Agent")
+	rayid := ctx.Get("Cf-Ray")
 
 	hashPassword, err := generate.HashPassword(password)
 	unhashedPassword = password
@@ -63,6 +64,8 @@ func (s *Service) createUserWithInvite(ctx fiber.Ctx, username, password string,
 		DiscordUID:  nil,
 		CreatedAt:   time.Now(),
 		UploadLimit: 1073741824,
+		UsedStorage: 0,
+		CFRayID:     rayid,
 	}
 
 	err = s.repo.WithTx(ctx, func(tx bun.Tx) error {
