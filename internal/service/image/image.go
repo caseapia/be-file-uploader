@@ -26,7 +26,7 @@ var allowedMime = map[string]string{
 	"image/gif":  ".gif",
 }
 
-const maxFileSize = 10 << 20
+const maxFileSize = 50 << 20
 
 func (s *Service) validateUploadLimits(u *models.User, size int64) error {
 	if size > maxFileSize {
