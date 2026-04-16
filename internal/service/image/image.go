@@ -1,9 +1,12 @@
 package image
 
 import (
+	"database/sql"
+	"errors"
 	"mime/multipart"
 	"net/http"
 	"path"
+	"slices"
 	"strconv"
 	"time"
 
@@ -12,14 +15,15 @@ import (
 	"be-file-uploader/pkg/utils/generate"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/gookit/slog"
 	"github.com/uptrace/bun"
 )
 
 var allowedMime = map[string]string{
-	"image/jpeg": "image/jpeg",
-	"image/png":  "image/png",
-	"image/webp": "image/webp",
-	"image/gif":  "image/gif",
+	"image/jpeg": ".jpg",
+	"image/png":  ".png",
+	"image/webp": ".webp",
+	"image/gif":  ".gif",
 }
 
 const maxFileSize = 10 << 20
@@ -64,7 +68,7 @@ func (s *Service) generateStorageKey(userID int, imgID, ext string) string {
 	)
 }
 
-func (s *Service) UploadImage(ctx fiber.Ctx, uploader *models.User) (*models.Image, error) {
+func (s *Service) UploadImage(ctx fiber.Ctx, uploader *models.User, isPrivate bool) (*models.Image, error) {
 	fileHeader, err := ctx.FormFile("image")
 	if err != nil {
 		return nil, fiber.NewError(fiber.StatusBadRequest, "ERR_IMAGE_MISSING")
@@ -90,6 +94,7 @@ func (s *Service) UploadImage(ctx fiber.Ctx, uploader *models.User) (*models.Ima
 	image := &models.Image{
 		R2Key: r2Key, URL: publicURL, OriginalName: fileHeader.Filename,
 		MimeType: mimeType, Size: fileHeader.Size, UploadedBy: uploader.ID,
+		IsPrivate: isPrivate,
 	}
 
 	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) error {
@@ -133,4 +138,101 @@ func (s *Service) DeleteImage(ctx fiber.Ctx, imageID int, requester *models.User
 	}
 
 	return nil
+}
+
+func (s *Service) LookupUserImages(ctx fiber.Ctx, user *models.User, requester *models.User) (images []models.Image, err error) {
+	images, err = s.repo.SearchImagesByUserID(ctx, user.ID)
+
+	if requester.ID != user.ID && !requester.HasPermission(role.ManageFiles) {
+		images = slices.DeleteFunc(images, func(image models.Image) bool {
+			return image.IsPrivate
+		})
+	}
+
+	return images, err
+}
+
+func (s *Service) lookupImageAndAlbum(
+	ctx fiber.Ctx,
+	senderID, imageID int,
+	albumID *int,
+) (image *models.Image, album *models.Album, err error) {
+
+	image, err = s.repo.SearchImageByID(ctx.Context(), imageID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil, fiber.NewError(fiber.StatusNotFound, "ERR_IMAGE_NOTFOUND")
+		}
+		return nil, nil, err
+	}
+
+	if albumID != nil {
+		album, err = s.repo.LookupAlbumByID(ctx.Context(), *albumID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, nil, fiber.NewError(fiber.StatusNotFound, "ERR_ALBUM_NOTFOUND")
+			}
+			return nil, nil, err
+		}
+
+		if senderID != album.CreatedByID {
+			return nil, nil, fiber.NewError(fiber.StatusForbidden, "ERR_ALBUM_FORBIDDEN")
+		}
+	}
+
+	if senderID != image.UploadedBy {
+		return nil, nil, fiber.NewError(fiber.StatusForbidden, "ERR_IMAGE_FORBIDDEN")
+	}
+
+	return image, album, nil
+}
+
+func (s *Service) AddImageInAlbum(ctx fiber.Ctx, sender *models.User, imageID, albumID int) (image *models.Image, err error) {
+	image, album, err := s.lookupImageAndAlbum(ctx, sender.ID, imageID, &albumID)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) (err error) {
+		image.AlbumID = &album.ID
+		_, err = s.repo.UpdateImage(ctx.Context(), tx, image)
+		if err != nil {
+			slog.WithData(slog.M{
+				"album": album,
+				"user":  sender,
+				"image": image,
+				"err":   err,
+			}).Error("repo.UpdateImage")
+			return fiber.NewError(fiber.StatusInternalServerError, "ERR_IMAGE_UPLOAD")
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return image, nil
+}
+
+func (s *Service) RemoveImageFromAlbum(ctx fiber.Ctx, sender *models.User, imageID int) (image *models.Image, err error) {
+	image, _, err = s.lookupImageAndAlbum(ctx, sender.ID, imageID, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) (err error) {
+		image.AlbumID = nil
+		_, err = s.repo.UpdateImage(ctx.Context(), tx, image)
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "ERR_IMAGE_UPLOAD")
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return image, nil
 }

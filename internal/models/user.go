@@ -30,6 +30,7 @@ type User struct {
 	UsedStorage int64                  `bun:"used_storage,default:0" json:"used_storage"`
 	IsVerified  bool                   `bun:"is_verified,default:false" json:"is_verified"`
 	CFRayID     string                 `bun:"cf_ray_id" json:"-"`
+	Albums      []Album                `bun:"rel:has-many,join:id=created_by" json:"albums"`
 }
 
 type UserRole struct {

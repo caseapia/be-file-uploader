@@ -38,10 +38,26 @@ func (r *Repository) SearchImageByID(ctx context.Context, id int) (*models.Image
 	err := r.DB.NewSelect().
 		Model(image).
 		Relation("Uploader").
+		Relation("Album").
+		Relation("Album.CreatedBy").
 		Where("i.id = ?", id).
 		Limit(1).
 		Scan(ctx)
 	return image, err
+}
+
+func (r *Repository) SearchOwnImages(ctx context.Context) ([]models.Image, error) {
+	var images []models.Image
+
+	err := r.DB.NewSelect().
+		Model(&images).
+		Relation("Uploader").
+		Relation("Album").
+		Relation("Album.CreatedBy").
+		OrderExpr("i.id DESC").
+		Scan(ctx)
+
+	return images, err
 }
 
 func (r *Repository) SearchImagesByUserID(ctx context.Context, userID int) ([]models.Image, error) {
@@ -49,7 +65,10 @@ func (r *Repository) SearchImagesByUserID(ctx context.Context, userID int) ([]mo
 	err := r.DB.NewSelect().
 		Model(&images).
 		Relation("Uploader").
+		Relation("Album").
+		Relation("Album.CreatedBy").
 		Where("i.uploaded_by = ?", userID).
+		Where("i.is_private = ?", false).
 		OrderExpr("i.id DESC").
 		Scan(ctx)
 
@@ -61,6 +80,8 @@ func (r *Repository) SearchAllImages(ctx context.Context) ([]models.Image, error
 	err := r.DB.NewSelect().
 		Model(&images).
 		Relation("Uploader").
+		Relation("Album").
+		Relation("Album.CreatedBy").
 		OrderExpr("i.id DESC").
 		Scan(ctx)
 
@@ -74,4 +95,13 @@ func (r *Repository) DeleteImage(ctx context.Context, tx bun.IDB, image *models.
 		Exec(ctx)
 
 	return err
+}
+
+func (r *Repository) UpdateImage(ctx context.Context, tx bun.IDB, image *models.Image) (*models.Image, error) {
+	_, err := tx.NewUpdate().
+		Model(image).
+		WherePK().
+		Exec(ctx)
+
+	return image, err
 }

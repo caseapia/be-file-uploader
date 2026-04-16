@@ -17,4 +17,7 @@ type Image struct {
 	Size         int64          `bun:"size" json:"size"`
 	UploadedBy   int            `bun:"uploaded_by" json:"-"`
 	Uploader     relations.User `bun:"rel:belongs-to,join:uploaded_by=id" json:"uploader"`
+	IsPrivate    bool           `bun:"is_private,default:false" json:"is_private"`
+	AlbumID      *int           `bun:"album_id" json:"-"`
+	Album        *Album         `bun:"rel:belongs-to,join:album_id=id" json:"album,omitempty"`
 }

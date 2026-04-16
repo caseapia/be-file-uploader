@@ -18,6 +18,9 @@ func (r *Repository) LookupUserByName(ctx context.Context, name string) (*models
 		Relation("Invite").
 		Relation("Storage").
 		Relation("Storage.Uploader").
+		Relation("Albums").
+		Relation("Albums.CreatedBy").
+		Relation("Albums.Items").
 		Limit(1).
 		Scan(ctx)
 	return user, err
@@ -33,6 +36,9 @@ func (r *Repository) LookupUserByID(ctx context.Context, id int) (*models.User, 
 		Relation("Invite").
 		Relation("Storage").
 		Relation("Storage.Uploader").
+		Relation("Albums").
+		Relation("Albums.CreatedBy").
+		Relation("Albums.Items").
 		Limit(1).
 		Scan(ctx)
 
@@ -46,8 +52,6 @@ func (r *Repository) LookupUsers(ctx context.Context, limit int) ([]models.User,
 		Model(&users).
 		Relation("Roles").
 		Relation("Invite").
-		Relation("Storage").
-		Relation("Storage.Uploader").
 		Limit(limit).
 		Scan(ctx)
 	return users, err

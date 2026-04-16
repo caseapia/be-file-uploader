@@ -24,12 +24,15 @@ func NewHandler(imageService *image.Service, repository *mysql.Repository) *Hand
 func (h *Handler) UploadImage(ctx fiber.Ctx) error {
 	uploader := account.GetUserFromContext(ctx)
 
-	img, err := h.imageService.UploadImage(ctx, uploader)
+	isPrivateRaw := ctx.FormValue("is_private")
+	isPrivate, _ := strconv.ParseBool(isPrivateRaw)
+
+	img, err := h.imageService.UploadImage(ctx, uploader, isPrivate)
 	if err != nil {
 		return err
 	}
 
-	return validation.Response(ctx, fiber.StatusCreated, img)
+	return validation.Response(ctx, 201, img)
 }
 
 func (h *Handler) DeleteImage(ctx fiber.Ctx) error {
@@ -48,9 +51,7 @@ func (h *Handler) DeleteImage(ctx fiber.Ctx) error {
 }
 
 func (h *Handler) LookupMyImages(ctx fiber.Ctx) error {
-	sender := account.GetUserFromContext(ctx)
-
-	images, err := h.repository.SearchImagesByUserID(ctx, sender.ID)
+	images, err := h.repository.SearchOwnImages(ctx)
 	if err != nil {
 		return err
 	}
@@ -77,4 +78,34 @@ func (h *Handler) LookupImagesByUserID(ctx fiber.Ctx) error {
 	}
 
 	return validation.Response(ctx, fiber.StatusOK, images)
+}
+
+func (h *Handler) AddInAlbum(ctx fiber.Ctx) error {
+	sender := account.GetUserFromContext(ctx)
+	var req requests.AddImageInAlbum
+	if err := validation.ParseAndValidate(ctx, &req); err != nil {
+		return err
+	}
+
+	img, err := h.imageService.AddImageInAlbum(ctx, sender, req.ImageID, req.AlbumID)
+	if err != nil {
+		return err
+	}
+
+	return validation.Response(ctx, fiber.StatusOK, img)
+}
+
+func (h *Handler) RemoveFromAlbum(ctx fiber.Ctx) error {
+	sender := account.GetUserFromContext(ctx)
+	var req requests.RemoveImageFromAlbum
+	if err := validation.ParseAndValidate(ctx, &req); err != nil {
+		return err
+	}
+
+	img, err := h.imageService.RemoveImageFromAlbum(ctx, sender, req.ImageID)
+	if err != nil {
+		return err
+	}
+
+	return validation.Response(ctx, fiber.StatusOK, img)
 }

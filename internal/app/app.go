@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"be-file-uploader/internal/database"
+	"be-file-uploader/internal/handler/album"
 	"be-file-uploader/internal/handler/auth"
 	"be-file-uploader/internal/handler/developer"
 	"be-file-uploader/internal/handler/image"
@@ -14,6 +15,7 @@ import (
 	"be-file-uploader/internal/handler/role"
 	"be-file-uploader/internal/handler/user"
 	"be-file-uploader/internal/repository/mysql"
+	albumSrv "be-file-uploader/internal/service/album"
 	authSrv "be-file-uploader/internal/service/auth"
 	storageSrv "be-file-uploader/internal/service/image"
 	inviteSrv "be-file-uploader/internal/service/invite"
@@ -77,6 +79,7 @@ func CreateApp() (app *fiber.App, db *database.Database, err error) {
 		JSONEncoder:                  sonic.Marshal,
 		JSONDecoder:                  sonic.Unmarshal,
 		ColorScheme:                  fiber.Colors{},
+		BodyLimit:                    20 * 1024 * 1024,
 	})
 
 	if *debug {
@@ -130,6 +133,9 @@ func CreateApp() (app *fiber.App, db *database.Database, err error) {
 	rolesService := rolesSrv.NewService(webDB)
 	rolesHandler := role.NewHandler(rolesService, webDB)
 
+	albumService := albumSrv.NewService(webDB)
+	albumHandler := album.NewHandler(albumService, webDB)
+
 	api := app.Group("/v1/api")
 	public := api.Group("/public")
 	private := api.Group("/private").Use(auth.Middleware(authService, webDB))
@@ -141,6 +147,7 @@ func CreateApp() (app *fiber.App, db *database.Database, err error) {
 	storageHandler.RegisterPrivateRoutes(private)
 	developerHandler.RegisterPublicRoutes(public)
 	rolesHandler.RegisterPrivateRoutes(private)
+	albumHandler.RegisterPrivateRoutes(private)
 
 	if *debug {
 		slog.Info("Registering routes...")
