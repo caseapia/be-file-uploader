@@ -123,8 +123,13 @@ func (s *Service) DeleteImage(ctx fiber.Ctx, imageID int, requester *models.User
 	}
 
 	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) (err error) {
+		requester.UsedStorage -= image.Size
 		if err = s.repo.DeleteImage(ctx.Context(), tx, image); err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, "ERR_IMAGE_DELETE")
+		}
+
+		if _, err = s.repo.UpdateUser(ctx.Context(), tx, requester, "used_storage"); err != nil {
+			return err
 		}
 
 		if err = s.storage.Delete(ctx.Context(), image.R2Key); err != nil {
