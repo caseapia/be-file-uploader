@@ -50,3 +50,17 @@ func (h *Handler) LookupAlbum(ctx fiber.Ctx) error {
 
 	return validation.Response(ctx, 200, alb)
 }
+
+func (h *Handler) DeleteAlbum(ctx fiber.Ctx) error {
+	sender := account.GetUserFromContext(ctx)
+
+	idStr := ctx.Params("id")
+	id, _ := strconv.Atoi(idStr)
+
+	state, err := h.albumService.DeleteAlbum(ctx, sender, id)
+	if err != nil {
+		return err
+	}
+
+	return validation.Response(ctx, 200, state)
+}

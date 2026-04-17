@@ -42,7 +42,7 @@ func (r *Repository) LookupAllAlbums(ctx context.Context) ([]models.Album, error
 	return albums, err
 }
 
-func (r *Repository) DeleteAlbum(ctx context.Context, tx bun.IDB, album models.Album) error {
+func (r *Repository) DeleteAlbum(ctx context.Context, tx bun.IDB, album *models.Album) error {
 	_, err := tx.NewDelete().
 		Model(album).
 		Where("al.id = ?", album.ID).

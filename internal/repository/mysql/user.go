@@ -13,9 +13,11 @@ func (r *Repository) LookupUserByName(ctx context.Context, name string) (*models
 
 	err := r.DB.NewSelect().
 		Model(user).
-		Where("username = ?", name).
+		Where("u.username = ?", name).
 		Relation("Roles").
 		Relation("Invite").
+		Relation("Invite.Creator").
+		Relation("Invite.User").
 		Relation("Storage").
 		Relation("Storage.Uploader").
 		Relation("Albums").
@@ -31,9 +33,11 @@ func (r *Repository) LookupUserByID(ctx context.Context, id int) (*models.User, 
 
 	err := r.DB.NewSelect().
 		Model(user).
-		Where("user.id = ?", id).
+		Where("u.id = ?", id).
 		Relation("Roles").
 		Relation("Invite").
+		Relation("Invite.Creator").
+		Relation("Invite.User").
 		Relation("Storage").
 		Relation("Storage.Uploader").
 		Relation("Albums").
@@ -52,6 +56,8 @@ func (r *Repository) LookupUsers(ctx context.Context, limit int) ([]models.User,
 		Model(&users).
 		Relation("Roles").
 		Relation("Invite").
+		Relation("Invite.Creator").
+		Relation("Invite.User").
 		Limit(limit).
 		Scan(ctx)
 	return users, err
@@ -96,11 +102,10 @@ func (r *Repository) AddUserInRole(ctx context.Context, tx bun.IDB, userID, role
 }
 
 func (r *Repository) RemoveUserFromRole(ctx context.Context, tx bun.IDB, userID, roleID int) error {
-	role := new(models.Role)
-
 	_, err := tx.NewDelete().
-		Model(role).
-		Where("user_id = ?, role_id = ?", userID, roleID).
+		Table("user_roles").
+		Where("user_id = ?", userID).
+		Where("role_id = ?", roleID).
 		Exec(ctx)
 
 	return err

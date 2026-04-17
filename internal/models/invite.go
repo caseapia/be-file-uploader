@@ -1,8 +1,14 @@
 package models
 
-import "be-file-uploader/internal/models/relations"
+import (
+	"be-file-uploader/internal/models/relations"
+
+	"github.com/uptrace/bun"
+)
 
 type Invite struct {
+	bun.BaseModel `bun:"table:invites,alias:inv"`
+
 	ID        int            `bun:"id,pk,autoincrement" json:"id"`
 	Code      string         `bun:"code,unique" json:"code"`
 	CreatedBy int            `bun:"created_by" json:"-"`

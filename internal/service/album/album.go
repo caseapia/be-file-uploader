@@ -59,3 +59,24 @@ func (s *Service) AlbumLookup(ctx fiber.Ctx, sender *models.User, albumID int) (
 
 	return album, nil
 }
+
+func (s *Service) DeleteAlbum(ctx fiber.Ctx, sender *models.User, albumID int) (state bool, err error) {
+	album, err := s.repo.LookupAlbumByID(ctx.Context(), albumID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, fiber.NewError(fiber.StatusNotFound, "ALBUM_NOT_FOUND")
+		}
+		return false, err
+	}
+
+	if sender.ID != album.CreatedByID && !sender.HasPermission(role.ManageFiles) {
+		return false, fiber.NewError(fiber.StatusNotFound, "ALBUM_NOTFOUND")
+	}
+
+	err = s.repo.DeleteAlbum(ctx.Context(), s.repo.DB, album)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}

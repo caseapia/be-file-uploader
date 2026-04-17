@@ -48,7 +48,7 @@ func (r *Repository) SearchInviteByID(ctx context.Context, id int) (*models.Invi
 		Model(invite).
 		Relation("Creator").
 		Relation("User").
-		Where("id = ?", id).
+		Where("inv.id = ?", id).
 		Scan(ctx)
 
 	return invite, err
@@ -64,6 +64,7 @@ func (r *Repository) CreateInvite(ctx context.Context, tx bun.IDB, invite *model
 func (r *Repository) RevokeInvite(ctx context.Context, tx bun.Tx, invite *models.Invite) error {
 	_, err := tx.NewUpdate().
 		Model(invite).
+		WherePK().
 		Set("is_active = ?", false).
 		Exec(ctx)
 

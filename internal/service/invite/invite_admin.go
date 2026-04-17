@@ -1,6 +1,9 @@
 package invite
 
 import (
+	"database/sql"
+	"errors"
+
 	"be-file-uploader/internal/models"
 	"be-file-uploader/pkg/utils/generate"
 
@@ -39,7 +42,10 @@ func (s *Service) CreateInvite(ctx fiber.Ctx, sender *models.User) (code string,
 func (s *Service) RevokeInvite(ctx fiber.Ctx, code int) (invite *models.Invite, err error) {
 	invite, err = s.repo.SearchInviteByID(ctx, code)
 	if err != nil {
-		return nil, fiber.NewError(fiber.StatusNotFound, "ERR_INVITE_NOTFOUND")
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fiber.NewError(fiber.StatusNotFound, "ERR_INVITE_NOTFOUND")
+		}
+		return nil, err
 	}
 
 	invite.IsActive = false

@@ -20,8 +20,8 @@ func (s *Service) LookupAccount(ctx context.Context, sender *models.User, target
 		})
 	}
 
-	isUserManager := sender.HasPermission(role.ManageUsers)
-	if isUserManager {
+	isSensetiveDataAccess := sender.HasPermission(role.ViewPrivateData)
+	if isSensetiveDataAccess {
 		account.Private = account.GetPrivateData()
 	}
 

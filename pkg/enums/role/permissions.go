@@ -11,4 +11,7 @@ const (
 	ManageFiles       Permission = "MANAGE_FILES"
 	ManageRoles       Permission = "MANAGE_ROLES"
 	Admin             Permission = "ADMIN"
+	ViewPrivateData   Permission = "VIEW_PRIVATE_DATA"
+	InviteUsers       Permission = "INVITE_USERS"
+	AdminCP           Permission = "ADMIN_CP"
 )
