@@ -51,7 +51,9 @@ func (h *Handler) DeleteImage(ctx fiber.Ctx) error {
 }
 
 func (h *Handler) LookupMyImages(ctx fiber.Ctx) error {
-	images, err := h.repository.SearchOwnImages(ctx)
+	sender := account.GetUserFromContext(ctx)
+
+	images, err := h.repository.SearchOwnImages(ctx, sender)
 	if err != nil {
 		return err
 	}
@@ -60,7 +62,9 @@ func (h *Handler) LookupMyImages(ctx fiber.Ctx) error {
 }
 
 func (h *Handler) LookupAllImages(ctx fiber.Ctx) error {
-	images, err := h.repository.SearchAllImages(ctx)
+	sender := account.GetUserFromContext(ctx)
+
+	images, err := h.imageService.LookupAllImages(ctx, sender)
 	if err != nil {
 		return err
 	}

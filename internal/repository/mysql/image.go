@@ -46,11 +46,12 @@ func (r *Repository) SearchImageByID(ctx context.Context, id int) (*models.Image
 	return image, err
 }
 
-func (r *Repository) SearchOwnImages(ctx context.Context) ([]models.Image, error) {
+func (r *Repository) SearchOwnImages(ctx context.Context, user *models.User) ([]models.Image, error) {
 	var images []models.Image
 
 	err := r.DB.NewSelect().
 		Model(&images).
+		Where("uploaded_by = ?", user.ID).
 		Relation("Uploader").
 		Relation("Album").
 		Relation("Album.CreatedBy").

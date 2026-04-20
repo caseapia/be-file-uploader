@@ -241,3 +241,18 @@ func (s *Service) RemoveImageFromAlbum(ctx fiber.Ctx, sender *models.User, image
 
 	return image, nil
 }
+
+func (s *Service) LookupAllImages(ctx fiber.Ctx, sender *models.User) (images []models.Image, err error) {
+	images, err = s.repo.SearchAllImages(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if !sender.HasPermission(role.ManageFiles) {
+		images = slices.DeleteFunc(images, func(img models.Image) bool {
+			return img.IsPrivate
+		})
+	}
+
+	return images, err
+}

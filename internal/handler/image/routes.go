@@ -16,7 +16,5 @@ func (h *Handler) RegisterPrivateRoutes(router fiber.Router) {
 	group.Get("/my", middleware.RequirePermission(role.ViewOwnFiles), h.LookupMyImages)
 	group.Put("/album/put", middleware.RequirePermission(role.FileUpload), h.AddInAlbum)
 	group.Delete("/album/delete", middleware.RequirePermission(role.FileUpload), h.RemoveFromAlbum)
-
-	groupAdmin := router.Group("/image/admin")
-	groupAdmin.Get("/list", middleware.RequirePermission(role.ManageFiles), h.LookupAllImages)
+	group.Get("/list", middleware.RequirePermission(role.ViewOtherFiles), h.LookupAllImages)
 }
