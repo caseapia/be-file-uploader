@@ -258,8 +258,11 @@ func (s *Service) LookupAllImages(ctx fiber.Ctx, sender *models.User) (images []
 }
 
 func (s *Service) AddView(ctx fiber.Ctx, sender *models.User, imageID int) (image *models.Image, err error) {
-	image, _, err = s.lookupImageAndAlbum(ctx, sender.ID, imageID, nil)
+	image, err = s.repo.SearchImageByID(ctx.Context(), imageID)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, err
 	}
 
