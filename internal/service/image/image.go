@@ -256,3 +256,34 @@ func (s *Service) LookupAllImages(ctx fiber.Ctx, sender *models.User) (images []
 
 	return images, err
 }
+
+func (s *Service) AddView(ctx fiber.Ctx, sender *models.User, imageID int) (image *models.Image, err error) {
+	image, _, err = s.lookupImageAndAlbum(ctx, sender.ID, imageID, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if image.UploadedBy == sender.ID {
+		return nil, nil
+	}
+
+	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) (err error) {
+		image.Views = image.Views + 1
+		_, err = s.repo.UpdateImage(ctx.Context(), tx, image)
+		if err != nil {
+			slog.WithData(slog.M{
+				"image": image,
+				"err":   err.Error(),
+			}).Error("repo.UpdateImage")
+
+			return fiber.NewError(fiber.StatusInternalServerError, "ERR_IMAGE_UPLOAD")
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return image, nil
+}

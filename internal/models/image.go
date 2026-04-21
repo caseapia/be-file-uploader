@@ -20,4 +20,5 @@ type Image struct {
 	IsPrivate    bool           `bun:"is_private,default:false" json:"is_private"`
 	AlbumID      *int           `bun:"album_id" json:"-"`
 	Album        *Album         `bun:"rel:belongs-to,join:album_id=id" json:"album,omitempty"`
+	Views        int            `bun:"views,default:0" json:"views"`
 }
