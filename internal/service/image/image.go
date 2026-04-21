@@ -267,7 +267,7 @@ func (s *Service) AddView(ctx fiber.Ctx, sender *models.User, imageID int) (imag
 	}
 
 	if image.UploadedBy == sender.ID {
-		return nil, nil
+		return image, nil
 	}
 
 	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) (err error) {
