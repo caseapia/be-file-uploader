@@ -17,5 +17,6 @@ func (h *Handler) RegisterPrivateRoutes(router fiber.Router) {
 	group.Put("/album/put", middleware.RequirePermission(role.FileUpload), h.AddInAlbum)
 	group.Delete("/album/delete", middleware.RequirePermission(role.FileUpload), h.RemoveFromAlbum)
 	group.Get("/list", middleware.RequirePermission(role.ViewOtherFiles), h.LookupAllImages)
-	group.Post("/image/addView/:id", h.AddView)
+	group.Patch("/post/action/like/:id", middleware.RequirePermission(role.ViewOtherFiles), h.LikePost)
+	group.Delete("/post/action/likeRemove/:id", middleware.RequirePermission(role.ViewOtherFiles), h.RemoveLikeFromPost)
 }

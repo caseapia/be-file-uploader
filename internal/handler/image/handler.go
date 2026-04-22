@@ -114,16 +114,30 @@ func (h *Handler) RemoveFromAlbum(ctx fiber.Ctx) error {
 	return validation.Response(ctx, fiber.StatusOK, img)
 }
 
-func (h *Handler) AddView(ctx fiber.Ctx) error {
+func (h *Handler) LikePost(ctx fiber.Ctx) error {
 	sender := account.GetUserFromContext(ctx)
 
 	idStr := ctx.Params("id")
 	id, _ := strconv.Atoi(idStr)
 
-	img, err := h.imageService.AddView(ctx, sender, id)
+	state, err := h.imageService.LikeImage(ctx, sender, id)
 	if err != nil {
 		return err
 	}
 
-	return validation.Response(ctx, fiber.StatusOK, img)
+	return validation.Response(ctx, fiber.StatusOK, state)
+}
+
+func (h *Handler) RemoveLikeFromPost(ctx fiber.Ctx) error {
+	sender := account.GetUserFromContext(ctx)
+
+	idStr := ctx.Params("id")
+	id, _ := strconv.Atoi(idStr)
+
+	state, err := h.imageService.RemoveLikeFromImage(ctx, sender, id)
+	if err != nil {
+		return err
+	}
+
+	return validation.Response(ctx, fiber.StatusOK, state)
 }

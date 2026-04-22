@@ -20,5 +20,24 @@ type Image struct {
 	IsPrivate    bool           `bun:"is_private,default:false" json:"is_private"`
 	AlbumID      *int           `bun:"album_id" json:"-"`
 	Album        *Album         `bun:"rel:belongs-to,join:album_id=id" json:"album,omitempty"`
-	Views        int            `bun:"views,default:0" json:"views"`
+	// Comments     []ImageComments `bun:"rel:has-many,join:id=image_id" json:"comments,omitempty"`
+	Likes []ImageLikes `bun:"rel:has-many,join:id=image_id" json:"likes,omitempty"`
+}
+
+type ImageLikes struct {
+	bun.BaseModel `bun:"table:images_likes,alias:il"`
+
+	ImageID  int            `bun:"image_id,pk" json:"image_id"`
+	AuthorID int            `bun:"author,pk" json:"author_id"`
+	Author   relations.User `bun:"rel:belongs-to,join:author=id" json:"author"`
+}
+
+type ImageComments struct {
+	bun.BaseModel `bun:"table:images_comments,alias:ic"`
+
+	ID       int            `bun:"id,pk,autoincrement" json:"id"`
+	AuthorID int            `bun:"author" json:"-"`
+	Author   relations.User `bun:"rel:belongs-to,join:author=id" json:"author"`
+	ImageID  int            `bun:"image_id" json:"image_id"`
+	Content  string         `bun:"content" json:"content"`
 }

@@ -20,10 +20,15 @@ import (
 )
 
 var allowedMime = map[string]string{
-	"image/jpeg": ".jpg",
-	"image/png":  ".png",
-	"image/webp": ".webp",
-	"image/gif":  ".gif",
+	"image/jpeg":                   ".jpg",
+	"image/png":                    ".png",
+	"image/webp":                   ".webp",
+	"image/gif":                    ".gif",
+	"application/pdf":              ".pdf",
+	"text/plain":                   ".txt",
+	"application/zip":              ".zip",
+	"application/x-rar-compressed": ".rar",
+	"application/x-7z-compressed":  ".7z",
 }
 
 const maxFileSize = 50 << 20
@@ -189,6 +194,8 @@ func (s *Service) lookupImageAndAlbum(
 		return nil, nil, fiber.NewError(fiber.StatusForbidden, "ERR_IMAGE_FORBIDDEN")
 	}
 
+	// _, err = s.repo.AddView(ctx, s.repo.DB, models.ImageViews{ImageID: image.ID, ViewerID: senderID})
+
 	return image, album, nil
 }
 
@@ -257,36 +264,76 @@ func (s *Service) LookupAllImages(ctx fiber.Ctx, sender *models.User) (images []
 	return images, err
 }
 
-func (s *Service) AddView(ctx fiber.Ctx, sender *models.User, imageID int) (image *models.Image, err error) {
-	image, err = s.repo.SearchImageByID(ctx.Context(), imageID)
+// func (s *Service) AddView(ctx fiber.Ctx, sender *models.User, imageID int) (state bool, err error) {
+// 	image, err := s.repo.SearchImageByID(ctx.Context(), imageID)
+// 	if err != nil {
+// 		if errors.Is(err, sql.ErrNoRows) {
+// 			return false, nil
+// 		}
+// 		return false, err
+// 	}
+//
+// 	if image.UploadedBy == sender.ID {
+// 		return false, nil
+// 	}
+//
+// 	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) (err error) {
+// 		view := models.ImageViews{
+// 			ImageID:  imageID,
+// 			ViewerID: sender.ID,
+// 		}
+//
+// 		_, err = s.repo.AddView(ctx.Context(), tx, view)
+// 		if err != nil {
+// 			return err
+// 		}
+//
+// 		return nil
+// 	})
+// 	if err != nil {
+// 		return false, err
+// 	}
+//
+// 	return true, nil
+// }
+
+func (s *Service) LikeImage(ctx fiber.Ctx, sender *models.User, imageID int) (state bool, err error) {
+	image, err := s.repo.SearchImageByID(ctx.Context(), imageID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return false, fiber.NewError(fiber.StatusNotFound, "ERR_IMAGE_NOTFOUND")
 		}
-		return nil, err
+		return false, err
+	}
+	like := models.ImageLikes{
+		ImageID:  image.ID,
+		AuthorID: sender.ID,
 	}
 
-	if image.UploadedBy == sender.ID {
-		return image, nil
-	}
-
-	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) (err error) {
-		image.Views = image.Views + 1
-		_, err = s.repo.UpdateImage(ctx.Context(), tx, image)
-		if err != nil {
-			slog.WithData(slog.M{
-				"image": image,
-				"err":   err.Error(),
-			}).Error("repo.UpdateImage")
-
-			return fiber.NewError(fiber.StatusInternalServerError, "ERR_IMAGE_UPLOAD")
-		}
-
-		return nil
-	})
+	state, err = s.repo.AddLike(ctx.Context(), s.repo.DB, like)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 
-	return image, nil
+	return state, nil
+}
+
+func (s *Service) RemoveLikeFromImage(ctx fiber.Ctx, sender *models.User, imageID int) (state bool, err error) {
+	image, err := s.repo.SearchImageByID(ctx.Context(), imageID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, fiber.NewError(fiber.StatusNotFound, "ERR_IMAGE_NOTFOUND")
+		}
+		return false, err
+	}
+
+	like := models.ImageLikes{
+		ImageID:  image.ID,
+		AuthorID: sender.ID,
+	}
+	state, err = s.repo.RemoveLike(ctx.Context(), s.repo.DB, like)
+	if err != nil {
+		return false, err
+	}
+	return state, nil
 }

@@ -64,3 +64,12 @@ func (h *Handler) DeleteAlbum(ctx fiber.Ctx) error {
 
 	return validation.Response(ctx, 200, state)
 }
+
+func (h *Handler) AllAlbums(ctx fiber.Ctx) error {
+	albums, err := h.repository.LookupAllAlbums(ctx.Context())
+	if err != nil {
+		return err
+	}
+
+	return validation.Response(ctx, 200, albums)
+}
