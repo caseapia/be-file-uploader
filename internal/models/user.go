@@ -31,6 +31,7 @@ type User struct {
 	IsVerified  bool                   `bun:"is_verified,default:false" json:"is_verified"`
 	CFRayID     string                 `bun:"cf_ray_id" json:"-"`
 	Albums      []Album                `bun:"rel:has-many,join:id=created_by" json:"albums"`
+	Locale      string                 `bun:"locale" json:"-"`
 }
 
 type UserRole struct {
@@ -58,5 +59,6 @@ func (u *User) GetPrivateData() map[string]interface{} {
 		"last_ip":     u.LastIP,
 		"useragent":   u.Useragent,
 		"cf_ray_id":   u.CFRayID,
+		"locale":      u.Locale,
 	}
 }

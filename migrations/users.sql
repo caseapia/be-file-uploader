@@ -15,6 +15,7 @@ create table users
     cf_ray_id    varchar(32)                          not null,
     used_storage bigint     default 0                 not null,
     is_verified  tinyint(1) default 0                 not null,
+    locale       varchar(2)                           not null,
     constraint discord_uid
         unique (discord_uid),
     constraint id
