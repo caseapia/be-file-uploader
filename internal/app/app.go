@@ -79,7 +79,7 @@ func CreateApp() (app *fiber.App, db *database.Database, err error) {
 		JSONEncoder:                  sonic.Marshal,
 		JSONDecoder:                  sonic.Unmarshal,
 		ColorScheme:                  fiber.Colors{},
-		BodyLimit:                    300 * 1024 * 1024,
+		BodyLimit:                    6000 * 1024 * 1024,
 	})
 
 	if *debug {

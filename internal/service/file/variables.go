@@ -12,4 +12,4 @@ var allowedMime = map[string]string{
 	"application/x-7z-compressed":  ".7z",
 }
 
-const maxFileSize = 200 << 20
+const maxFileSize = 4000 << 20
