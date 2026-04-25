@@ -109,12 +109,6 @@ func (s *Service) registerTx(ctx fiber.Ctx, tx bun.Tx, user *models.User, invite
 }
 
 func (s *Service) createSessionTokens(ctx fiber.Ctx, user *models.User) (access, refresh string, err error) {
-	go func(u models.User) {
-		if err := s.repo.CleanupExpiredSessions(ctx, s.repo.DB, &u); err != nil {
-			slog.WithData(slog.M{"error": err}).Error("Cleanup expired sessions failed")
-		}
-	}(*user)
-
 	user, access, refresh, err = s.Login(ctx, user.Username, unhashedPassword)
 	if err != nil {
 		return "", "", err

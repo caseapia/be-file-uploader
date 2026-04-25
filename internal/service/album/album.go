@@ -52,7 +52,7 @@ func (s *Service) AlbumLookup(ctx fiber.Ctx, sender *models.User, albumID int) (
 	}
 
 	if sender.ID != album.CreatedByID && !sender.HasPermission(role.ManageFiles) {
-		album.Items = slices.DeleteFunc(album.Items, func(img models.Image) bool {
+		album.Items = slices.DeleteFunc(album.Items, func(img models.File) bool {
 			return img.IsPrivate
 		})
 	}

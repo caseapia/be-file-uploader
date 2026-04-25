@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"be-file-uploader/internal/models"
+	"be-file-uploader/internal/models/relations"
 	"be-file-uploader/pkg/enums/role"
 	"be-file-uploader/pkg/utils/generate"
 
@@ -18,20 +19,6 @@ import (
 	"github.com/gookit/slog"
 	"github.com/uptrace/bun"
 )
-
-var allowedMime = map[string]string{
-	"image/jpeg":                   ".jpg",
-	"image/png":                    ".png",
-	"image/webp":                   ".webp",
-	"image/gif":                    ".gif",
-	"application/pdf":              ".pdf",
-	"text/plain":                   ".txt",
-	"application/zip":              ".zip",
-	"application/x-rar-compressed": ".rar",
-	"application/x-7z-compressed":  ".7z",
-}
-
-const maxFileSize = 50 << 20
 
 func (s *Service) validateUploadLimits(u *models.User, size int64) error {
 	if size > maxFileSize {
@@ -73,7 +60,7 @@ func (s *Service) generateStorageKey(userID int, imgID, ext string) string {
 	)
 }
 
-func (s *Service) UploadImage(ctx fiber.Ctx, uploader *models.User, isPrivate bool) (*models.Image, error) {
+func (s *Service) UploadFile(ctx fiber.Ctx, uploader *models.User, isPrivate bool) (*models.File, error) {
 	fileHeader, err := ctx.FormFile("image")
 	if err != nil {
 		return nil, fiber.NewError(fiber.StatusBadRequest, "ERR_IMAGE_MISSING")
@@ -96,7 +83,7 @@ func (s *Service) UploadImage(ctx fiber.Ctx, uploader *models.User, isPrivate bo
 		return nil, fiber.NewError(fiber.StatusInternalServerError, "ERR_IMAGE_UPLOAD")
 	}
 
-	image := &models.Image{
+	image := &models.File{
 		R2Key: r2Key, URL: publicURL, OriginalName: fileHeader.Filename,
 		MimeType: mimeType, Size: fileHeader.Size, UploadedBy: uploader.ID,
 		IsPrivate: isPrivate,
@@ -106,7 +93,7 @@ func (s *Service) UploadImage(ctx fiber.Ctx, uploader *models.User, isPrivate bo
 		if err := s.repo.ReserveDiskSpace(ctx.Context(), tx, uploader, fileHeader.Size); err != nil {
 			return err
 		}
-		return s.repo.CreateImage(ctx, tx, image)
+		return s.repo.CreateFile(ctx, tx, image)
 	})
 
 	if err != nil {
@@ -117,8 +104,8 @@ func (s *Service) UploadImage(ctx fiber.Ctx, uploader *models.User, isPrivate bo
 	return image, nil
 }
 
-func (s *Service) DeleteImage(ctx fiber.Ctx, imageID int, requester *models.User) error {
-	image, err := s.repo.SearchImageByID(ctx, imageID)
+func (s *Service) DeleteFile(ctx fiber.Ctx, imageID int, requester *models.User) error {
+	image, err := s.repo.SearchFileByID(ctx, imageID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusNotFound, "ERR_IMAGE_NOTFOUND")
 	}
@@ -129,7 +116,7 @@ func (s *Service) DeleteImage(ctx fiber.Ctx, imageID int, requester *models.User
 
 	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) (err error) {
 		requester.UsedStorage -= image.Size
-		if err = s.repo.DeleteImage(ctx.Context(), tx, image); err != nil {
+		if err = s.repo.DeleteFile(ctx.Context(), tx, image); err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, "ERR_IMAGE_DELETE")
 		}
 
@@ -150,11 +137,11 @@ func (s *Service) DeleteImage(ctx fiber.Ctx, imageID int, requester *models.User
 	return nil
 }
 
-func (s *Service) LookupUserImages(ctx fiber.Ctx, user *models.User, requester *models.User) (images []models.Image, err error) {
-	images, err = s.repo.SearchImagesByUserID(ctx, user.ID)
+func (s *Service) LookupUserFiles(ctx fiber.Ctx, user *models.User, requester *models.User) (images []models.File, err error) {
+	images, err = s.repo.SearchFilesByUserID(ctx, user.ID)
 
 	if requester.ID != user.ID && !requester.HasPermission(role.ManageFiles) {
-		images = slices.DeleteFunc(images, func(image models.Image) bool {
+		images = slices.DeleteFunc(images, func(image models.File) bool {
 			return image.IsPrivate
 		})
 	}
@@ -162,13 +149,13 @@ func (s *Service) LookupUserImages(ctx fiber.Ctx, user *models.User, requester *
 	return images, err
 }
 
-func (s *Service) lookupImageAndAlbum(
+func (s *Service) lookupFileAndAlbum(
 	ctx fiber.Ctx,
 	senderID, imageID int,
 	albumID *int,
-) (image *models.Image, album *models.Album, err error) {
+) (image *models.File, album *models.Album, err error) {
 
-	image, err = s.repo.SearchImageByID(ctx.Context(), imageID)
+	image, err = s.repo.SearchFileByID(ctx.Context(), imageID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil, fiber.NewError(fiber.StatusNotFound, "ERR_IMAGE_NOTFOUND")
@@ -199,15 +186,15 @@ func (s *Service) lookupImageAndAlbum(
 	return image, album, nil
 }
 
-func (s *Service) AddImageInAlbum(ctx fiber.Ctx, sender *models.User, imageID, albumID int) (image *models.Image, err error) {
-	image, album, err := s.lookupImageAndAlbum(ctx, sender.ID, imageID, &albumID)
+func (s *Service) AddImageInAlbum(ctx fiber.Ctx, sender *models.User, imageID, albumID int) (image *models.File, err error) {
+	image, album, err := s.lookupFileAndAlbum(ctx, sender.ID, imageID, &albumID)
 	if err != nil {
 		return nil, err
 	}
 
 	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) (err error) {
 		image.AlbumID = &album.ID
-		_, err = s.repo.UpdateImage(ctx.Context(), tx, image)
+		_, err = s.repo.UpdateFile(ctx.Context(), tx, image)
 		if err != nil {
 			slog.WithData(slog.M{
 				"album": album,
@@ -227,15 +214,15 @@ func (s *Service) AddImageInAlbum(ctx fiber.Ctx, sender *models.User, imageID, a
 	return image, nil
 }
 
-func (s *Service) RemoveImageFromAlbum(ctx fiber.Ctx, sender *models.User, imageID int) (image *models.Image, err error) {
-	image, _, err = s.lookupImageAndAlbum(ctx, sender.ID, imageID, nil)
+func (s *Service) RemoveImageFromAlbum(ctx fiber.Ctx, sender *models.User, imageID int) (image *models.File, err error) {
+	image, _, err = s.lookupFileAndAlbum(ctx, sender.ID, imageID, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) (err error) {
 		image.AlbumID = nil
-		_, err = s.repo.UpdateImage(ctx.Context(), tx, image)
+		_, err = s.repo.UpdateFile(ctx.Context(), tx, image)
 		if err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, "ERR_IMAGE_UPLOAD")
 		}
@@ -249,14 +236,14 @@ func (s *Service) RemoveImageFromAlbum(ctx fiber.Ctx, sender *models.User, image
 	return image, nil
 }
 
-func (s *Service) LookupAllImages(ctx fiber.Ctx, sender *models.User) (images []models.Image, err error) {
-	images, err = s.repo.SearchAllImages(ctx)
+func (s *Service) LookupAllFiles(ctx fiber.Ctx, sender *models.User) (images []models.File, err error) {
+	images, err = s.repo.SearchAllFiles(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	if !sender.HasPermission(role.ManageFiles) {
-		images = slices.DeleteFunc(images, func(img models.Image) bool {
+		images = slices.DeleteFunc(images, func(img models.File) bool {
 			return img.IsPrivate
 		})
 	}
@@ -264,76 +251,93 @@ func (s *Service) LookupAllImages(ctx fiber.Ctx, sender *models.User) (images []
 	return images, err
 }
 
-// func (s *Service) AddView(ctx fiber.Ctx, sender *models.User, imageID int) (state bool, err error) {
-// 	image, err := s.repo.SearchImageByID(ctx.Context(), imageID)
-// 	if err != nil {
-// 		if errors.Is(err, sql.ErrNoRows) {
-// 			return false, nil
-// 		}
-// 		return false, err
-// 	}
-//
-// 	if image.UploadedBy == sender.ID {
-// 		return false, nil
-// 	}
-//
-// 	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) (err error) {
-// 		view := models.ImageViews{
-// 			ImageID:  imageID,
-// 			ViewerID: sender.ID,
-// 		}
-//
-// 		_, err = s.repo.AddView(ctx.Context(), tx, view)
-// 		if err != nil {
-// 			return err
-// 		}
-//
-// 		return nil
-// 	})
-// 	if err != nil {
-// 		return false, err
-// 	}
-//
-// 	return true, nil
-// }
-
-func (s *Service) LikeImage(ctx fiber.Ctx, sender *models.User, imageID int) (state bool, err error) {
-	image, err := s.repo.SearchImageByID(ctx.Context(), imageID)
+func (s *Service) FindFile(ctx fiber.Ctx, sender *models.User, imageID int) (*models.File, error) {
+	image, err := s.repo.SearchFileByID(ctx.Context(), imageID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return false, fiber.NewError(fiber.StatusNotFound, "ERR_IMAGE_NOTFOUND")
+			return nil, fiber.NewError(fiber.StatusNotFound, "ERR_IMAGE_NOTFOUND")
 		}
-		return false, err
-	}
-	like := models.ImageLikes{
-		ImageID:  image.ID,
-		AuthorID: sender.ID,
+		return nil, err
 	}
 
-	state, err = s.repo.AddLike(ctx.Context(), s.repo.DB, like)
-	if err != nil {
-		return false, err
+	if image.IsPrivate == true && sender.ID != image.UploadedBy || !sender.HasPermission(role.ManageFiles) {
+		return nil, fiber.NewError(fiber.StatusNotFound, "ERR_IMAGE_NOTFOUND")
 	}
 
-	return state, nil
+	return image, nil
 }
 
-func (s *Service) RemoveLikeFromImage(ctx fiber.Ctx, sender *models.User, imageID int) (state bool, err error) {
-	image, err := s.repo.SearchImageByID(ctx.Context(), imageID)
+func (s *Service) ToggleLike(ctx fiber.Ctx, sender *models.User, imageID int, add bool) (bool, error) {
+	image, err := s.FindFile(ctx, sender, imageID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return false, fiber.NewError(fiber.StatusNotFound, "ERR_IMAGE_NOTFOUND")
-		}
 		return false, err
 	}
 
-	like := models.ImageLikes{
+	like := models.FileLike{
 		ImageID:  image.ID,
 		AuthorID: sender.ID,
 	}
-	state, err = s.repo.RemoveLike(ctx.Context(), s.repo.DB, like)
-	if err != nil {
-		return false, err
+
+	if add {
+		return s.repo.AddLike(ctx.Context(), s.repo.DB, like)
 	}
-	return state, nil
+	return s.repo.RemoveLike(ctx.Context(), s.repo.DB, like)
+}
+
+func (s *Service) DownloadFile(ctx fiber.Ctx, sender *models.User, fileID int) (link string, err error) {
+	file, err := s.FindFile(ctx, sender, fileID)
+	if err != nil {
+		return "", err
+	}
+
+	if file.IsPrivate == true && sender.ID != file.UploadedBy {
+		return "", fiber.NewError(fiber.StatusNotFound, "ERR_IMAGE_NOTFOUND")
+	}
+
+	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) (err error) {
+		file.Downloads = file.Downloads + 1
+
+		_, err = s.repo.UpdateFile(ctx.Context(), tx, file)
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "ERR_IMAGE_UPLOAD")
+		}
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return file.URL, err
+}
+
+func (s *Service) AddComment(ctx fiber.Ctx, sender *models.User, image int, content string) (comment *models.FileComment, err error) {
+	post, err := s.FindFile(ctx, sender, image)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) (err error) {
+		comment = &models.FileComment{
+			AuthorID:  sender.ID,
+			ImageID:   post.ID,
+			CreatedAt: time.Now(),
+			Content:   content,
+			Author: relations.User{
+				ID:       sender.ID,
+				Username: sender.Username,
+			},
+		}
+
+		comment, err = s.repo.AddComment(ctx.Context(), tx, comment)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return comment, nil
 }

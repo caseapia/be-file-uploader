@@ -17,7 +17,7 @@ import (
 	"be-file-uploader/internal/repository/mysql"
 	albumSrv "be-file-uploader/internal/service/album"
 	authSrv "be-file-uploader/internal/service/auth"
-	storageSrv "be-file-uploader/internal/service/image"
+	storageSrv "be-file-uploader/internal/service/file"
 	inviteSrv "be-file-uploader/internal/service/invite"
 	rolesSrv "be-file-uploader/internal/service/role"
 	userSrv "be-file-uploader/internal/service/user"
@@ -42,7 +42,7 @@ func CreateApp() (app *fiber.App, db *database.Database, err error) {
 		return nil, nil, err
 	}
 
-	webDB := mysql.NewRepository(db.Web)
+	webDB := mysql.NewRepository(db.Web, db.Redis)
 
 	app = fiber.New(fiber.Config{
 		ServerHeader:  "",
@@ -79,7 +79,7 @@ func CreateApp() (app *fiber.App, db *database.Database, err error) {
 		JSONEncoder:                  sonic.Marshal,
 		JSONDecoder:                  sonic.Unmarshal,
 		ColorScheme:                  fiber.Colors{},
-		BodyLimit:                    50 * 1024 * 1024,
+		BodyLimit:                    300 * 1024 * 1024,
 	})
 
 	if *debug {

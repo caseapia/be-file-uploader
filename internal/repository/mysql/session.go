@@ -2,82 +2,66 @@ package mysql
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"time"
 
 	"be-file-uploader/internal/models"
 
-	"github.com/gookit/slog"
-	"github.com/uptrace/bun"
+	"github.com/redis/go-redis/v9"
 )
 
-func (r *Repository) CreateSession(ctx context.Context, tx bun.IDB, session *models.Session) error {
-	res, err := tx.NewInsert().
-		Model(session).
-		Exec(ctx)
+func (r *Repository) CreateSession(ctx context.Context, session *models.Session) error {
+	data, err := json.Marshal(session)
 	if err != nil {
 		return err
 	}
 
-	rows, _ := res.RowsAffected()
-	slog.WithData(slog.M{
-		"rows_affected": rows,
-		"session_id":    session.ID,
-	}).Info("CreateSession rows affected")
+	ttl := time.Until(session.ExpiresAt)
 
-	return nil
-}
+	pipe := r.redis.Pipeline()
 
-func (r *Repository) SearchSessionByRefreshHash(ctx context.Context, hash string) (*models.Session, error) {
-	session := new(models.Session)
+	pipe.Set(ctx, fmt.Sprintf("session:%s", session.ID), data, ttl)
 
-	err := r.DB.NewSelect().
-		Model(session).
-		Where("refresh_hash = ?", hash).
-		Limit(1).
-		Scan(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return session, nil
-}
+	pipe.Set(ctx, fmt.Sprintf("session_hash:%s", session.RefreshHash), session.ID, ttl)
 
-func (r *Repository) SearchSessionByID(ctx context.Context, id string) (*models.Session, error) {
-	session := new(models.Session)
-
-	err := r.DB.NewSelect().
-		Model(session).
-		Where("id = ?", id).
-		Limit(1).
-		Scan(ctx)
-
-	return session, err
-}
-
-func (r *Repository) CleanupExpiredSessions(ctx context.Context, tx bun.IDB, user *models.User) error {
-	_, err := tx.NewDelete().
-		Model((*models.Session)(nil)).
-		Where("user_id = ?", user.ID).
-		Where("expires_at < ?", time.Now()).
-		Exec(ctx)
+	_, err = pipe.Exec(ctx)
 	return err
 }
 
-func (r *Repository) TerminateSession(ctx context.Context, tx bun.IDB, sessionID string) (bool, error) {
-	_, err := tx.NewDelete().
-		Model((*models.Session)(nil)).
-		Where("id = ?", sessionID).
-		Exec(ctx)
+func (r *Repository) SearchSessionByRefreshHash(ctx context.Context, hash string) (*models.Session, error) {
+	sessionID, err := r.redis.Get(ctx, fmt.Sprintf("session_hash:%s", hash)).Result()
+	if errors.Is(err, redis.Nil) {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	return r.SearchSessionByID(ctx, sessionID)
+}
+
+func (r *Repository) SearchSessionByID(ctx context.Context, id string) (*models.Session, error) {
+	data, err := r.redis.Get(ctx, fmt.Sprintf("session:%s", id)).Result()
+	if errors.Is(err, redis.Nil) {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	session := new(models.Session)
+	if err := json.Unmarshal([]byte(data), session); err != nil {
+		return nil, err
+	}
+
+	return session, nil
+}
+
+func (r *Repository) TerminateSession(ctx context.Context, sessionID string) (bool, error) {
+	err := r.redis.Del(ctx, fmt.Sprintf("session:%s", sessionID)).Err()
 	if err != nil {
 		return false, err
 	}
 
 	return true, err
-}
-
-func (r *Repository) UpdateSession(ctx context.Context, tx bun.IDB, s *models.Session) error {
-	_, err := tx.NewUpdate().
-		Model(s).
-		WherePK().
-		Exec(ctx)
-	return err
 }

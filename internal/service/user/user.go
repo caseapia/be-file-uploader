@@ -15,7 +15,7 @@ func (s *Service) LookupAccount(ctx context.Context, sender *models.User, target
 	}
 
 	if sender.ID != account.ID && !sender.HasPermission(role.ManageFiles) {
-		account.Storage = slices.DeleteFunc(account.Storage, func(image models.Image) bool {
+		account.Storage = slices.DeleteFunc(account.Storage, func(image models.File) bool {
 			return image.IsPrivate
 		})
 	}

@@ -16,3 +16,8 @@ type AddImageInAlbum struct {
 type RemoveImageFromAlbum struct {
 	ImageID int `json:"image_id" validate:"required,min=1"`
 }
+
+type AddCommentToPost struct {
+	PostID  int    `json:"post_id" validate:"required,min=1"`
+	Content string `json:"content" validate:"required,min=1"`
+}

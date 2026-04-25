@@ -10,7 +10,6 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/gookit/slog"
-	"github.com/uptrace/bun"
 )
 
 func (s *Service) Login(ctx fiber.Ctx, username, password string) (user *models.User, access string, refresh string, err error) {
@@ -47,24 +46,10 @@ func (s *Service) Login(ctx fiber.Ctx, username, password string) (user *models.
 		RefreshHash:  refreshHash,
 	}
 
-	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) (err error) {
-		if err = s.repo.CreateSession(ctx.Context(), tx, session); err != nil {
-			slog.WithData(slog.M{"error": err}).Error("Session creation failed inside tx")
-			return fiber.NewError(fiber.StatusInternalServerError, "ERR_SESSION_CREATION")
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, "", "", err
+	if err = s.repo.CreateSession(ctx.Context(), session); err != nil {
+		slog.WithData(slog.M{"error": err}).Error("Session creation failed")
+		return nil, "", "", fiber.NewError(fiber.StatusInternalServerError, "ERR_SESSION_CREATION")
 	}
-
-	go func(user models.User) {
-		if err := s.repo.CleanupExpiredSessions(ctx, s.repo.DB, &user); err != nil {
-			slog.WithData(slog.M{
-				"error": err,
-			}).Error("Cleanup expired sessions failed")
-		}
-	}(*user)
 
 	access, err = token.GenerateAccessToken(user.ID, 1, sessionID)
 	if err != nil {
@@ -104,38 +89,31 @@ func (s *Service) RefreshToken(ctx fiber.Ctx, refreshToken string) (access strin
 	ip := ctx.IP()
 	useragent := ctx.Get("X-User-Agent")
 
-	err = s.repo.WithTx(ctx, func(tx bun.Tx) (err error) {
-		refresh, err = GenerateRefreshToken()
-		if err != nil {
-			slog.WithData(slog.M{
-				"error": err,
-				"user":  user,
-			}).Error("Refresh token generation failed")
-			return fiber.NewError(fiber.StatusInternalServerError, "ERR_TOKEN_GENERATION")
-		}
-
-		access, err = token.GenerateAccessToken(user.ID, 1, session.ID)
-		if err != nil {
-			slog.WithData(slog.M{
-				"error":   err,
-				"user":    user,
-				"refresh": refresh,
-			}).Error("Access token generation failed")
-			return fiber.NewError(fiber.StatusInternalServerError, "ERR_TOKEN_GENERATION")
-		}
-
-		session.RefreshHash = generate.HashToken(refresh)
-		session.ExpiresAt = time.Now().Add(7 * 24 * time.Hour)
-		session.IPAddress = ip
-		session.UserAgent = useragent
-
-		if err := s.repo.UpdateSession(ctx, tx, session); err != nil {
-			return err
-		}
-
-		return nil
-	})
+	refresh, err = GenerateRefreshToken()
 	if err != nil {
+		slog.WithData(slog.M{
+			"error": err,
+			"user":  user,
+		}).Error("Refresh token generation failed")
+		return "", "", fiber.NewError(fiber.StatusInternalServerError, "ERR_TOKEN_GENERATION")
+	}
+
+	access, err = token.GenerateAccessToken(user.ID, 1, session.ID)
+	if err != nil {
+		slog.WithData(slog.M{
+			"error":   err,
+			"user":    user,
+			"refresh": refresh,
+		}).Error("Access token generation failed")
+		return "", "", fiber.NewError(fiber.StatusInternalServerError, "ERR_TOKEN_GENERATION")
+	}
+
+	session.RefreshHash = generate.HashToken(refresh)
+	session.ExpiresAt = time.Now().Add(7 * 24 * time.Hour)
+	session.IPAddress = ip
+	session.UserAgent = useragent
+
+	if err := s.repo.CreateSession(ctx, session); err != nil {
 		return "", "", err
 	}
 
@@ -160,21 +138,14 @@ func (s *Service) Logout(ctx fiber.Ctx, session *models.Session, user *models.Us
 	session.UserAgent = ctx.Get("X-User-Agent")
 	session.ExpiresAt = time.Now()
 
-	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) (err error) {
-		err = s.repo.UpdateSession(ctx, tx, session)
-		if err != nil {
-			slog.WithData(slog.M{
-				"error":   err,
-				"user":    session.UserID,
-				"session": session,
-			}).Error("Session update failed")
-			return fiber.NewError(fiber.StatusInternalServerError, "ERR_SESSION_UPDATE")
-		}
-
-		return nil
-	})
+	err = s.repo.CreateSession(ctx, session)
 	if err != nil {
-		return err
+		slog.WithData(slog.M{
+			"error":   err,
+			"user":    session.UserID,
+			"session": session,
+		}).Error("Session update failed")
+		return fiber.NewError(fiber.StatusInternalServerError, "ERR_SESSION_UPDATE")
 	}
 
 	return nil

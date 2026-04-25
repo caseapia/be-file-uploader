@@ -17,7 +17,7 @@ type Album struct {
 	CreatedBy   relations.User `bun:"rel:belongs-to,join:created_by=id" json:"created_by"`
 	CreatedAt   time.Time      `bun:"created_at,default:current_timestamp" json:"created_at"`
 	UpdatedAt   time.Time      `bun:"updated_at,default:current_timestamp" json:"updated_at"`
-	Items       []Image        `bun:"rel:has-many,join:id=album_id" json:"items,omitempty"`
+	Items       []File         `bun:"rel:has-many,join:id=album_id" json:"items,omitempty"`
 	Options     AlbumOptions   `bun:"embed:" json:"options"`
 }
 

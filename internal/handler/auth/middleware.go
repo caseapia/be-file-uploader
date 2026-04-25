@@ -14,6 +14,10 @@ import (
 )
 
 func ValidateSession(r *mysql.Repository, session *models.Session) error {
+	if session == nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "ERR_SESSION_NOTFOUND")
+	}
+
 	if session.IsActive == false {
 		slog.Error("Session revoked", "session_id", session.ID)
 		return fiber.NewError(fiber.StatusForbidden, "ERR_USER_SESSION_REVOKED")
@@ -31,7 +35,7 @@ func ValidateSession(r *mysql.Repository, session *models.Session) error {
 		go func(sid string) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			_, _ = r.TerminateSession(ctx, r.DB, sid)
+			_, _ = r.TerminateSession(ctx, sid)
 		}(session.ID)
 
 		return fiber.NewError(fiber.StatusForbidden, "ERR_USER_SESSION_EXPIRED")
@@ -63,7 +67,7 @@ func Middleware(auth *auth.Service, repo *mysql.Repository) fiber.Handler {
 		}
 
 		session, err := repo.SearchSessionByID(ctx, claims.SessionID)
-		if err != nil {
+		if err != nil || session == nil {
 			return fiber.NewError(fiber.StatusUnauthorized, "ERR_SESSION_NOTFOUND")
 		}
 

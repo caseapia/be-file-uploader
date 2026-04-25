@@ -5,7 +5,7 @@ import (
 
 	"be-file-uploader/internal/models/requests"
 	"be-file-uploader/internal/repository/mysql"
-	"be-file-uploader/internal/service/image"
+	"be-file-uploader/internal/service/file"
 	"be-file-uploader/pkg/utils/account"
 	"be-file-uploader/pkg/utils/validation"
 
@@ -27,7 +27,7 @@ func (h *Handler) UploadImage(ctx fiber.Ctx) error {
 	isPrivateRaw := ctx.FormValue("is_private")
 	isPrivate, _ := strconv.ParseBool(isPrivateRaw)
 
-	img, err := h.imageService.UploadImage(ctx, uploader, isPrivate)
+	img, err := h.imageService.UploadFile(ctx, uploader, isPrivate)
 	if err != nil {
 		return err
 	}
@@ -43,7 +43,7 @@ func (h *Handler) DeleteImage(ctx fiber.Ctx) error {
 
 	requester := account.GetUserFromContext(ctx)
 
-	if err := h.imageService.DeleteImage(ctx, req.ImageID, requester); err != nil {
+	if err := h.imageService.DeleteFile(ctx, req.ImageID, requester); err != nil {
 		return err
 	}
 
@@ -53,7 +53,7 @@ func (h *Handler) DeleteImage(ctx fiber.Ctx) error {
 func (h *Handler) LookupMyImages(ctx fiber.Ctx) error {
 	sender := account.GetUserFromContext(ctx)
 
-	images, err := h.repository.SearchOwnImages(ctx, sender)
+	images, err := h.repository.SearchOwnFiles(ctx, sender)
 	if err != nil {
 		return err
 	}
@@ -64,7 +64,7 @@ func (h *Handler) LookupMyImages(ctx fiber.Ctx) error {
 func (h *Handler) LookupAllImages(ctx fiber.Ctx) error {
 	sender := account.GetUserFromContext(ctx)
 
-	images, err := h.imageService.LookupAllImages(ctx, sender)
+	images, err := h.imageService.LookupAllFiles(ctx, sender)
 	if err != nil {
 		return err
 	}
@@ -76,7 +76,7 @@ func (h *Handler) LookupImagesByUserID(ctx fiber.Ctx) error {
 	idStr := ctx.Params("id")
 	id, _ := strconv.Atoi(idStr)
 
-	images, err := h.repository.SearchImagesByUserID(ctx, id)
+	images, err := h.repository.SearchFilesByUserID(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -120,7 +120,7 @@ func (h *Handler) LikePost(ctx fiber.Ctx) error {
 	idStr := ctx.Params("id")
 	id, _ := strconv.Atoi(idStr)
 
-	state, err := h.imageService.LikeImage(ctx, sender, id)
+	state, err := h.imageService.ToggleLike(ctx, sender, id, true)
 	if err != nil {
 		return err
 	}
@@ -134,10 +134,54 @@ func (h *Handler) RemoveLikeFromPost(ctx fiber.Ctx) error {
 	idStr := ctx.Params("id")
 	id, _ := strconv.Atoi(idStr)
 
-	state, err := h.imageService.RemoveLikeFromImage(ctx, sender, id)
+	state, err := h.imageService.ToggleLike(ctx, sender, id, false)
 	if err != nil {
 		return err
 	}
 
 	return validation.Response(ctx, fiber.StatusOK, state)
+}
+
+func (h *Handler) DownloadImage(ctx fiber.Ctx) error {
+	sender := account.GetUserFromContext(ctx)
+
+	idStr := ctx.Params("id")
+	id, _ := strconv.Atoi(idStr)
+
+	link, err := h.imageService.DownloadFile(ctx, sender, id)
+	if err != nil {
+		return err
+	}
+
+	return validation.Response(ctx, fiber.StatusCreated, link)
+}
+
+func (h *Handler) AddComment(ctx fiber.Ctx) error {
+	sender := account.GetUserFromContext(ctx)
+
+	var req requests.AddCommentToPost
+	if err := validation.ParseAndValidate(ctx, &req); err != nil {
+		return err
+	}
+
+	comment, err := h.imageService.AddComment(ctx, sender, req.PostID, req.Content)
+	if err != nil {
+		return err
+	}
+
+	return validation.Response(ctx, fiber.StatusCreated, comment)
+}
+
+func (h *Handler) LookupPostByID(ctx fiber.Ctx) error {
+	sender := account.GetUserFromContext(ctx)
+
+	idStr := ctx.Params("id")
+	id, _ := strconv.Atoi(idStr)
+
+	findedImage, err := h.imageService.FindFile(ctx, sender, id)
+	if err != nil {
+		return err
+	}
+
+	return validation.Response(ctx, fiber.StatusOK, findedImage)
 }
