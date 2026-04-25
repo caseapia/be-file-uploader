@@ -1,9 +1,11 @@
 package models
 
 import (
+	"strings"
 	"time"
 
 	"be-file-uploader/internal/models/relations"
+	"be-file-uploader/pkg/enums/role"
 
 	"github.com/uptrace/bun"
 )
@@ -13,7 +15,7 @@ type File struct {
 
 	ID           int            `bun:"id,pk,autoincrement" json:"id"`
 	R2Key        string         `bun:"r2_key,unique" json:"-"`
-	URL          string         `bun:"url" json:"-"`
+	URL          string         `bun:"url" json:"url"`
 	OriginalName string         `bun:"original_name" json:"original_name"`
 	MimeType     string         `bun:"mime_type" json:"mime_type"`
 	Size         int64          `bun:"size" json:"size"`
@@ -51,3 +53,15 @@ type FileComment struct {
 // 	AuthorID int            `bun:"author" json:"-"`
 // 	Author   relations.User `bun:"rel:belongs-to,join:author=id" json:"author"`
 // }
+
+func (f *File) ResolveURL(sender *User) {
+	if !strings.Contains(f.MimeType, "image") {
+		f.URL = ""
+		return
+	}
+
+	if f.IsPrivate && f.UploadedBy != sender.ID && !sender.HasPermission(role.ManageFiles) {
+		f.URL = ""
+		return
+	}
+}

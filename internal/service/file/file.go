@@ -8,6 +8,7 @@ import (
 	"path"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"be-file-uploader/internal/models"
@@ -146,6 +147,10 @@ func (s *Service) LookupUserFiles(ctx fiber.Ctx, user *models.User, requester *m
 		})
 	}
 
+	for i := range images {
+		images[i].ResolveURL(requester)
+	}
+
 	return images, err
 }
 
@@ -248,6 +253,10 @@ func (s *Service) LookupAllFiles(ctx fiber.Ctx, sender *models.User) (images []m
 		})
 	}
 
+	for i := range images {
+		images[i].ResolveURL(sender)
+	}
+
 	return images, err
 }
 
@@ -262,6 +271,10 @@ func (s *Service) FindFile(ctx fiber.Ctx, sender *models.User, imageID int) (*mo
 
 	if image.IsPrivate == true && sender.ID != image.UploadedBy || !sender.HasPermission(role.ManageFiles) {
 		return nil, fiber.NewError(fiber.StatusNotFound, "ERR_IMAGE_NOTFOUND")
+	}
+
+	if strings.Contains(image.MimeType, "image") && (sender.ID != image.UploadedBy || !sender.HasPermission(role.ManageFiles)) {
+		image.URL = ""
 	}
 
 	return image, nil
