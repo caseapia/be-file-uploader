@@ -26,7 +26,7 @@ type File struct {
 	Album        *Album         `bun:"rel:belongs-to,join:album_id=id" json:"album,omitempty"`
 	Comments     []FileComment  `bun:"rel:has-many,join:id=image_id" json:"comments,omitempty"`
 	Likes        []FileLike     `bun:"rel:has-many,join:id=image_id" json:"likes,omitempty"`
-	Downloads    int            `bun:"downloads" json:"downloads,omitempty"`
+	Downloads    int            `bun:"downloads,default:0" json:"downloads"`
 }
 
 type FileLike struct {

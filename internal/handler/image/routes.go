@@ -20,6 +20,6 @@ func (h *Handler) RegisterPrivateRoutes(router fiber.Router) {
 	group.Patch("/post/action/like/:id", middleware.RequirePermission(role.ViewOtherFiles), h.LikePost)
 	group.Delete("/post/action/likeRemove/:id", middleware.RequirePermission(role.ViewOtherFiles), h.RemoveLikeFromPost)
 	group.Get("/post/action/download/:id", middleware.RequirePermission(role.DownloadOtherFiles), h.DownloadImage)
-	group.Post("/post/action/addComment", middleware.RequirePermission(role.DownloadOtherFiles), h.AddComment)
+	group.Post("/post/action/addComment", middleware.RequirePermission(role.ViewOtherFiles), h.AddComment)
 	group.Get("/post/:id", middleware.RequirePermission(role.ViewOtherFiles), h.LookupPostByID)
 }

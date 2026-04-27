@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"mime/multipart"
-	"net/http"
 	"path"
 	"slices"
 	"strconv"
@@ -16,6 +15,7 @@ import (
 	"be-file-uploader/pkg/enums/role"
 	"be-file-uploader/pkg/utils/generate"
 
+	"github.com/gabriel-vasile/mimetype"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gookit/slog"
 	"github.com/uptrace/bun"
@@ -43,13 +43,15 @@ func (s *Service) processImageFile(fh *multipart.FileHeader) ([]byte, string, st
 		return nil, "", "", fiber.NewError(fiber.StatusInternalServerError, "ERR_FILE_READING")
 	}
 
-	mimeType := http.DetectContentType(data)
-	ext, ok := allowedMime[mimeType]
+	mtype := mimetype.Detect(data)
+	m := mtype.String()
+
+	ext, ok := allowedMime[mtype.String()]
 	if !ok {
-		return nil, "", "", fiber.NewError(fiber.StatusUnsupportedMediaType, "ERR_IMAGE_UNSUPPORTED_TYPE")
+		return nil, "", "", fiber.NewError(fiber.StatusInternalServerError, "ERR_MIMETYPE")
 	}
 
-	return data, mimeType, ext, nil
+	return data, m, ext, nil
 }
 
 func (s *Service) generateStorageKey(userID int, imgID, ext string) string {
@@ -269,7 +271,7 @@ func (s *Service) FindFile(ctx fiber.Ctx, sender *models.User, imageID int) (*mo
 		return nil, err
 	}
 
-	if image.IsPrivate == true && sender.ID != image.UploadedBy || !sender.HasPermission(role.ManageFiles) {
+	if (image.IsPrivate && sender.ID != image.UploadedBy) && !sender.HasPermission(role.ManageFiles) {
 		return nil, fiber.NewError(fiber.StatusNotFound, "ERR_IMAGE_NOTFOUND")
 	}
 
