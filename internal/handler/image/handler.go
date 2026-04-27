@@ -43,11 +43,15 @@ func (h *Handler) DeleteImage(ctx fiber.Ctx) error {
 
 	requester := account.GetUserFromContext(ctx)
 
-	if err := h.imageService.DeleteFile(ctx, req.ImageID, requester); err != nil {
+	usedStorage, err := h.imageService.DeleteFile(ctx, req.ImageID, requester)
+	if err != nil {
 		return err
 	}
 
-	return validation.Response(ctx, fiber.StatusOK, "OK")
+	return validation.Response(ctx, fiber.StatusOK, &fiber.Map{
+		"used_storage": usedStorage,
+		"status":       "OK",
+	})
 }
 
 func (h *Handler) LookupMyImages(ctx fiber.Ctx) error {

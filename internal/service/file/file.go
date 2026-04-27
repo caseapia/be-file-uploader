@@ -107,14 +107,14 @@ func (s *Service) UploadFile(ctx fiber.Ctx, uploader *models.User, isPrivate boo
 	return image, nil
 }
 
-func (s *Service) DeleteFile(ctx fiber.Ctx, imageID int, requester *models.User) error {
+func (s *Service) DeleteFile(ctx fiber.Ctx, imageID int, requester *models.User) (uploadLimit *int64, err error) {
 	image, err := s.repo.SearchFileByID(ctx, imageID)
 	if err != nil {
-		return fiber.NewError(fiber.StatusNotFound, "ERR_IMAGE_NOTFOUND")
+		return nil, fiber.NewError(fiber.StatusNotFound, "ERR_IMAGE_NOTFOUND")
 	}
 
 	if image.UploadedBy != requester.ID && !requester.HasPermission(role.ManageFiles) {
-		return fiber.NewError(fiber.StatusForbidden, "ERR_IMAGE_FORBIDDEN")
+		return nil, fiber.NewError(fiber.StatusForbidden, "ERR_IMAGE_FORBIDDEN")
 	}
 
 	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) (err error) {
@@ -134,10 +134,10 @@ func (s *Service) DeleteFile(ctx fiber.Ctx, imageID int, requester *models.User)
 		return nil
 	})
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "ERR_DELETE_IMAGE")
+		return nil, fiber.NewError(fiber.StatusInternalServerError, "ERR_DELETE_IMAGE")
 	}
 
-	return nil
+	return &requester.UsedStorage, nil
 }
 
 func (s *Service) LookupUserFiles(ctx fiber.Ctx, user *models.User, requester *models.User) (images []models.File, err error) {
