@@ -7,7 +7,6 @@ import (
 	"be-file-uploader/internal/repository/mysql"
 	"be-file-uploader/internal/service/file"
 	"be-file-uploader/internal/service/user"
-	"be-file-uploader/pkg/enums/role"
 	"be-file-uploader/pkg/utils/account"
 	"be-file-uploader/pkg/utils/validation"
 
@@ -239,10 +238,6 @@ func (h *Handler) ShareXUpload(ctx fiber.Ctx) error {
 	u, err := h.userService.AuthByToken(ctx.Context(), token)
 	if err != nil {
 		return err
-	}
-
-	if !u.HasPermission(role.FileUpload) {
-		return fiber.NewError(fiber.StatusForbidden, "ERR_NO_PERMISSION")
 	}
 
 	fileHeader, err := ctx.FormFile("image")
