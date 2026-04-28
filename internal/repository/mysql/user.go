@@ -110,3 +110,15 @@ func (r *Repository) RemoveUserFromRole(ctx context.Context, tx bun.IDB, userID,
 
 	return err
 }
+
+func (r *Repository) LookupUserByToken(ctx context.Context, token string) (*models.User, error) {
+	user := new(models.User)
+
+	err := r.DB.NewSelect().
+		Model(user).
+		Where("sharex_token = ?", token).
+		Limit(1).
+		Scan(ctx)
+
+	return user, err
+}

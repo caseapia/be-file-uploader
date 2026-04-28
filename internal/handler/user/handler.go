@@ -116,3 +116,14 @@ func (h *Handler) VerifyUser(ctx fiber.Ctx) error {
 
 	return validation.Response(ctx, 200, u)
 }
+
+func (h *Handler) GenerateAPIToken(ctx fiber.Ctx) error {
+	sender := account.GetUserFromContext(ctx)
+
+	token, err := h.userService.GenerateAPIToken(ctx, sender.ID)
+	if err != nil {
+		return err
+	}
+
+	return validation.Response(ctx, 200, token)
+}

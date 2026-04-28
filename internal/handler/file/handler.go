@@ -1,4 +1,4 @@
-package image
+package file
 
 import (
 	"strconv"
@@ -6,6 +6,7 @@ import (
 	"be-file-uploader/internal/models/requests"
 	"be-file-uploader/internal/repository/mysql"
 	"be-file-uploader/internal/service/file"
+	"be-file-uploader/internal/service/user"
 	"be-file-uploader/pkg/utils/account"
 	"be-file-uploader/pkg/utils/validation"
 
@@ -14,25 +15,67 @@ import (
 
 type Handler struct {
 	imageService *image.Service
+	userService  *user.Service
 	repository   *mysql.Repository
 }
 
-func NewHandler(imageService *image.Service, repository *mysql.Repository) *Handler {
-	return &Handler{imageService: imageService, repository: repository}
+func NewHandler(imageService *image.Service, userService *user.Service, repository *mysql.Repository) *Handler {
+	return &Handler{imageService: imageService, userService: userService, repository: repository}
 }
 
-func (h *Handler) UploadImage(ctx fiber.Ctx) error {
+func (h *Handler) InitUpload(ctx fiber.Ctx) error {
 	uploader := account.GetUserFromContext(ctx)
 
-	isPrivateRaw := ctx.FormValue("is_private")
-	isPrivate, _ := strconv.ParseBool(isPrivateRaw)
+	var req requests.InitUpload
+	if err := validation.ParseAndValidate(ctx, &req); err != nil {
+		return err
+	}
 
-	img, err := h.imageService.UploadFile(ctx, uploader, isPrivate)
+	resp, err := h.imageService.InitMultipartUpload(ctx.Context(), uploader, req)
 	if err != nil {
 		return err
 	}
 
-	return validation.Response(ctx, 201, img)
+	return validation.Response(ctx, fiber.StatusOK, resp)
+}
+
+func (h *Handler) UploadChunk(ctx fiber.Ctx) error {
+	uploadID := ctx.FormValue("upload_id")
+	key := ctx.FormValue("key")
+	partNumberRaw := ctx.FormValue("part_number")
+
+	partNumber, err := strconv.ParseInt(partNumberRaw, 10, 32)
+	if err != nil || uploadID == "" || key == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "ERR_INVALID_PARAMS")
+	}
+
+	fileHeader, err := ctx.FormFile("chunk")
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "ERR_CHUNK_MISSING")
+	}
+
+	eTag, err := h.imageService.UploadChunk(ctx.Context(), uploadID, key, int32(partNumber), fileHeader)
+	if err != nil {
+		return err
+	}
+
+	return validation.Response(ctx, fiber.StatusOK, &fiber.Map{"eTag": eTag})
+}
+
+func (h *Handler) CompleteUpload(ctx fiber.Ctx) error {
+	uploader := account.GetUserFromContext(ctx)
+
+	var req requests.CompleteUpload
+	if err := validation.ParseAndValidate(ctx, &req); err != nil {
+		return err
+	}
+
+	fl, err := h.imageService.CompleteMultipartUpload(ctx.Context(), uploader, &req)
+	if err != nil {
+		return err
+	}
+
+	return validation.Response(ctx, fiber.StatusCreated, fl)
 }
 
 func (h *Handler) DeleteImage(ctx fiber.Ctx) error {
@@ -188,4 +231,58 @@ func (h *Handler) LookupPostByID(ctx fiber.Ctx) error {
 	}
 
 	return validation.Response(ctx, fiber.StatusOK, findedImage)
+}
+
+func (h *Handler) ShareXUpload(ctx fiber.Ctx) error {
+	token := ctx.FormValue("token")
+	u, err := h.userService.AuthByToken(ctx.Context(), token)
+	if err != nil {
+		return err
+	}
+
+	fileHeader, err := ctx.FormFile("image")
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "ERR_IMAGE_MISSING")
+	}
+
+	initReq := requests.InitUpload{
+		OriginalName: fileHeader.Filename,
+		MimeType:     fileHeader.Header.Get("Content-Type"),
+		Size:         fileHeader.Size,
+		IsPrivate:    false,
+	}
+
+	initResp, err := h.imageService.InitMultipartUpload(ctx.Context(), u, initReq)
+	if err != nil {
+		return err
+	}
+
+	file, _ := fileHeader.Open()
+	defer file.Close()
+
+	eTag, err := h.imageService.UploadChunk(ctx.Context(), initResp.UploadID, initResp.Key, 1, fileHeader)
+	if err != nil {
+		return err
+	}
+
+	completeReq := requests.CompleteUpload{
+		UploadID:     initResp.UploadID,
+		Key:          initResp.Key,
+		OriginalName: initReq.OriginalName,
+		MimeType:     initReq.MimeType,
+		Size:         initReq.Size,
+		IsPrivate:    initReq.IsPrivate,
+		Parts: []requests.Part{
+			{PartNumber: 1, ETag: eTag},
+		},
+	}
+
+	img, err := h.imageService.CompleteMultipartUpload(ctx.Context(), u, &completeReq)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(fiber.Map{
+		"url": img.URL,
+	})
 }

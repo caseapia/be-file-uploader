@@ -1,6 +1,7 @@
 package image
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"mime/multipart"
@@ -12,9 +13,12 @@ import (
 
 	"be-file-uploader/internal/models"
 	"be-file-uploader/internal/models/relations"
+	"be-file-uploader/internal/models/requests"
 	"be-file-uploader/pkg/enums/role"
 	"be-file-uploader/pkg/utils/generate"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gookit/slog"
@@ -63,48 +67,87 @@ func (s *Service) generateStorageKey(userID int, imgID, ext string) string {
 	)
 }
 
-func (s *Service) UploadFile(ctx fiber.Ctx, uploader *models.User, isPrivate bool) (*models.File, error) {
-	fileHeader, err := ctx.FormFile("image")
-	if err != nil {
-		return nil, fiber.NewError(fiber.StatusBadRequest, "ERR_IMAGE_MISSING")
-	}
-
-	if err := s.validateUploadLimits(uploader, fileHeader.Size); err != nil {
+func (s *Service) InitMultipartUpload(ctx context.Context, uploader *models.User, req requests.InitUpload) (*requests.InitUploadResponse, error) {
+	if err := s.validateUploadLimits(uploader, req.Size); err != nil {
 		return nil, err
 	}
 
-	data, mimeType, ext, err := s.processImageFile(fileHeader)
-	if err != nil {
-		return nil, err
+	ext, ok := allowedMime[req.MimeType]
+	if !ok {
+		return nil, fiber.NewError(fiber.StatusInternalServerError, "ERR_MIMETYPE")
 	}
 
 	imageID, _ := generate.ImageID()
 	r2Key := s.generateStorageKey(uploader.ID, imageID, ext)
 
-	publicURL, err := s.storage.Upload(ctx.Context(), r2Key, mimeType, data)
+	uploadID, err := s.storage.CreateMultipartUpload(ctx, r2Key, req.MimeType)
 	if err != nil {
-		return nil, fiber.NewError(fiber.StatusInternalServerError, "ERR_IMAGE_UPLOAD")
-	}
-
-	image := &models.File{
-		R2Key: r2Key, URL: publicURL, OriginalName: fileHeader.Filename,
-		MimeType: mimeType, Size: fileHeader.Size, UploadedBy: uploader.ID,
-		IsPrivate: isPrivate,
-	}
-
-	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) error {
-		if err := s.repo.ReserveDiskSpace(ctx.Context(), tx, uploader, fileHeader.Size); err != nil {
-			return err
-		}
-		return s.repo.CreateFile(ctx, tx, image)
-	})
-
-	if err != nil {
-		_ = s.storage.Delete(ctx.Context(), r2Key)
 		return nil, err
 	}
 
-	return image, nil
+	return &requests.InitUploadResponse{
+		UploadID: uploadID,
+		Key:      r2Key,
+	}, nil
+}
+
+func (s *Service) UploadChunk(ctx context.Context, uploadID, key string, partNumber int32, fh *multipart.FileHeader) (string, error) {
+	file, err := fh.Open()
+	if err != nil {
+		return "", fiber.NewError(fiber.StatusInternalServerError, "ERR_OPEN_IMAGE")
+	}
+	defer file.Close()
+
+	data, err := s.storage.ReadAll(file)
+	if err != nil {
+		return "", fiber.NewError(fiber.StatusInternalServerError, "ERR_FILE_READING")
+	}
+
+	eTag, err := s.storage.UploadPart(ctx, key, uploadID, partNumber, data)
+	if err != nil {
+		return "", fiber.NewError(fiber.StatusInternalServerError, "ERR_UPLOAD_CHUNK")
+	}
+
+	return eTag, nil
+}
+
+func (s *Service) CompleteMultipartUpload(ctx context.Context, uploader *models.User, req *requests.CompleteUpload) (*models.File, error) {
+	var s3Parts []types.CompletedPart
+	for _, p := range req.Parts {
+		s3Parts = append(s3Parts, types.CompletedPart{
+			PartNumber: aws.Int32(p.PartNumber),
+			ETag:       aws.String(p.ETag),
+		})
+	}
+
+	publicURL, err := s.storage.CompleteMultipartUpload(ctx, req.Key, req.UploadID, s3Parts)
+	if err != nil {
+		return nil, fiber.NewError(fiber.StatusInternalServerError, "ERR_COMPLETE_MULTIPART")
+	}
+
+	file := models.File{
+		R2Key:        req.Key,
+		URL:          publicURL,
+		OriginalName: req.OriginalName,
+		MimeType:     req.MimeType,
+		Size:         req.Size,
+		UploadedBy:   uploader.ID,
+		IsPrivate:    req.IsPrivate,
+	}
+
+	err = s.repo.WithTx(ctx, func(tx bun.Tx) error {
+		if err := s.repo.ReserveDiskSpace(ctx, tx, uploader, req.Size); err != nil {
+			return err
+		}
+
+		return s.repo.CreateFile(ctx, tx, &file)
+	})
+	if err != nil {
+		_ = s.storage.Delete(ctx, req.Key)
+		return nil, fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+
+	return &file, nil
 }
 
 func (s *Service) DeleteFile(ctx fiber.Ctx, imageID int, requester *models.User) (uploadLimit *int64, err error) {

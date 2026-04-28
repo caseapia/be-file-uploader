@@ -32,6 +32,7 @@ type User struct {
 	CFRayID     string                 `bun:"cf_ray_id" json:"-"`
 	Albums      []Album                `bun:"rel:has-many,join:id=created_by" json:"albums"`
 	Locale      string                 `bun:"locale" json:"-"`
+	ShareXToken *string                `bun:"sharex_token" json:"-"`
 }
 
 type UserRole struct {
@@ -55,10 +56,11 @@ func (u *User) HasPermission(permission role.Permission) bool {
 
 func (u *User) GetPrivateData() map[string]interface{} {
 	return map[string]interface{}{
-		"register_ip": u.RegisterIP,
-		"last_ip":     u.LastIP,
-		"useragent":   u.Useragent,
-		"cf_ray_id":   u.CFRayID,
-		"locale":      u.Locale,
+		"register_ip":  u.RegisterIP,
+		"last_ip":      u.LastIP,
+		"useragent":    u.Useragent,
+		"cf_ray_id":    u.CFRayID,
+		"locale":       u.Locale,
+		"sharex_token": u.ShareXToken,
 	}
 }

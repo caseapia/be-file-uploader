@@ -10,7 +10,7 @@ import (
 	"be-file-uploader/internal/handler/album"
 	"be-file-uploader/internal/handler/auth"
 	"be-file-uploader/internal/handler/developer"
-	"be-file-uploader/internal/handler/image"
+	"be-file-uploader/internal/handler/file"
 	"be-file-uploader/internal/handler/invite"
 	"be-file-uploader/internal/handler/role"
 	"be-file-uploader/internal/handler/user"
@@ -126,7 +126,7 @@ func CreateApp() (app *fiber.App, db *database.Database, err error) {
 	inviteHandler := invite.NewHandler(inviteService, webDB)
 
 	storageService := storageSrv.NewService(webDB, storage)
-	storageHandler := image.NewHandler(storageService, webDB)
+	storageHandler := file.NewHandler(storageService, userService, webDB)
 
 	developerHandler := developer.NewHandler(webDB)
 

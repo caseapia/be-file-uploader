@@ -1,6 +1,9 @@
 package user
 
 import (
+	"database/sql"
+	"errors"
+
 	"be-file-uploader/internal/models"
 	role2 "be-file-uploader/pkg/enums/role"
 
@@ -131,6 +134,26 @@ func (s *Service) VerifyUser(ctx fiber.Ctx, userID int) (user *models.User, err 
 	if err != nil {
 		return nil, err
 	}
+
+	return user, nil
+}
+
+func (s *Service) ResetUserAPIToken(ctx fiber.Ctx, sender *models.User, userID int) (user *models.User, err error) {
+	user, err = s.repo.LookupUserByID(ctx.Context(), userID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fiber.NewError(fiber.StatusNotFound, "ERR_USER_NOTFOUND")
+		}
+		return nil, err
+	}
+
+	if sender.ID != userID && !sender.HasPermission(role2.ManageUsers) {
+		return nil, fiber.NewError(fiber.StatusForbidden, "ERR_NO_ACCESS")
+	}
+
+	user.ShareXToken = nil
+
+	user, err = s.repo.UpdateUser(ctx.Context(), s.repo.DB, user, "sharex_token")
 
 	return user, nil
 }

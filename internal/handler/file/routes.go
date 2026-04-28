@@ -1,4 +1,4 @@
-package image
+package file
 
 import (
 	"be-file-uploader/internal/middleware"
@@ -9,8 +9,13 @@ import (
 
 func (h *Handler) RegisterPrivateRoutes(router fiber.Router) {
 	group := router.Group("/storage")
+	upload := group.Group("/upload")
 
-	group.Post("/upload", middleware.RequirePermission(role.FileUpload), h.UploadImage)
+	upload.Post("/init", middleware.RequirePermission(role.FileUpload), h.InitUpload)
+	upload.Post("/chunk", middleware.RequirePermission(role.FileUpload), h.UploadChunk)
+	upload.Post("/complete", middleware.RequirePermission(role.FileUpload), h.CompleteUpload)
+	upload.Post("/sharex", middleware.RequirePermission(role.FileUpload), h.ShareXUpload)
+
 	group.Post("/delete", middleware.RequirePermission(role.FileUpload), h.DeleteImage)
 	group.Get("/list/:id", middleware.RequirePermission(role.ViewOtherFiles), h.LookupImagesByUserID)
 	group.Get("/my", middleware.RequirePermission(role.ViewOwnFiles), h.LookupMyImages)
