@@ -14,7 +14,6 @@ func (h *Handler) RegisterPrivateRoutes(router fiber.Router) {
 	upload.Post("/init", middleware.RequirePermission(role.FileUpload), h.InitUpload)
 	upload.Post("/chunk", middleware.RequirePermission(role.FileUpload), h.UploadChunk)
 	upload.Post("/complete", middleware.RequirePermission(role.FileUpload), h.CompleteUpload)
-	upload.Post("/sharex", middleware.RequirePermission(role.FileUpload), h.ShareXUpload)
 
 	group.Post("/delete", middleware.RequirePermission(role.FileUpload), h.DeleteImage)
 	group.Get("/list/:id", middleware.RequirePermission(role.ViewOtherFiles), h.LookupImagesByUserID)
@@ -27,4 +26,10 @@ func (h *Handler) RegisterPrivateRoutes(router fiber.Router) {
 	group.Get("/post/action/download/:id", middleware.RequirePermission(role.DownloadOtherFiles), h.DownloadImage)
 	group.Post("/post/action/addComment", middleware.RequirePermission(role.ViewOtherFiles), h.AddComment)
 	group.Get("/post/:id", middleware.RequirePermission(role.ViewOtherFiles), h.LookupPostByID)
+}
+
+func (h *Handler) RegisterPublicRoutes(router fiber.Router) {
+	group := router.Group("/storge/upload")
+
+	group.Post("/sharex", middleware.RequirePermission(role.FileUpload), h.ShareXUpload)
 }

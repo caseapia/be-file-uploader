@@ -145,6 +145,7 @@ func CreateApp() (app *fiber.App, db *database.Database, err error) {
 	inviteHandler.RegisterPrivateRoutes(private)
 	userHandler.RegisterPrivateRoutes(private)
 	storageHandler.RegisterPrivateRoutes(private)
+	storageHandler.RegisterPublicRoutes(public)
 	developerHandler.RegisterPublicRoutes(public)
 	rolesHandler.RegisterPrivateRoutes(private)
 	albumHandler.RegisterPrivateRoutes(private)
