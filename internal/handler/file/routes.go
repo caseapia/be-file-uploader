@@ -29,7 +29,7 @@ func (h *Handler) RegisterPrivateRoutes(router fiber.Router) {
 }
 
 func (h *Handler) RegisterPublicRoutes(router fiber.Router) {
-	group := router.Group("/storge/upload")
+	group := router.Group("/storage/upload")
 
 	group.Post("/sharex", middleware.RequirePermission(role.FileUpload), h.ShareXUpload)
 }
