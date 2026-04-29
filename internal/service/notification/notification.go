@@ -43,7 +43,7 @@ func (s *Service) ReadNotification(ctx context.Context, sender *models.User, not
 		slog.WithData(slog.M{
 			"user":         sender,
 			"notification": notification,
-		})
+		}).Error("ERR_NOTIFICATION_FORBIDDEN")
 		return false, fiber.NewError(fiber.StatusForbidden, "ERR_NOTIFICATION_FORBIDDEN")
 	}
 
