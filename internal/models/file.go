@@ -23,9 +23,9 @@ type File struct {
 	Uploader     relations.User `bun:"rel:belongs-to,join:uploaded_by=id" json:"uploader"`
 	IsPrivate    bool           `bun:"is_private,default:false" json:"is_private"`
 	AlbumID      *int           `bun:"album_id" json:"-"`
-	Album        *Album         `bun:"rel:belongs-to,join:album_id=id" json:"album,omitempty"`
-	Comments     []FileComment  `bun:"rel:has-many,join:id=image_id" json:"comments,omitempty"`
-	Likes        []FileLike     `bun:"rel:has-many,join:id=image_id" json:"likes,omitempty"`
+	Album        *Album         `bun:"rel:belongs-to,join:album_id=id" json:"album"`
+	Comments     []FileComment  `bun:"rel:has-many,join:id=image_id" json:"comments"`
+	Likes        []FileLike     `bun:"rel:has-many,join:id=image_id" json:"likes"`
 	Downloads    int            `bun:"downloads,default:0" json:"downloads"`
 	CreatedAt    time.Time      `bun:"created_at,default:current_timestamp" json:"created_at"`
 }
