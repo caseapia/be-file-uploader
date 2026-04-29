@@ -17,6 +17,7 @@ func (r *Repository) LookupUserByName(ctx context.Context, name string) (*models
 		Relation("Roles").
 		Relation("Storage").
 		Relation("Storage.Uploader").
+		Relation("Storage.Likes").
 		Relation("Albums").
 		Relation("Albums.CreatedBy").
 		Relation("Albums.Items").
@@ -34,6 +35,7 @@ func (r *Repository) LookupUserByID(ctx context.Context, id int) (*models.User, 
 		Relation("Roles").
 		Relation("Storage").
 		Relation("Storage.Uploader").
+		Relation("Storage.Likes").
 		Relation("Albums").
 		Relation("Albums.CreatedBy").
 		Relation("Albums.Items").
