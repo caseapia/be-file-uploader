@@ -40,6 +40,10 @@ func (s *Service) ReadNotification(ctx context.Context, sender *models.User, not
 		return false, fiber.NewError(fiber.StatusNotFound, "ERR_NOTIFICATION_NOTFOUND")
 	}
 	if notification.UserID != sender.ID {
+		slog.WithData(slog.M{
+			"user":         sender,
+			"notification": notification,
+		})
 		return false, fiber.NewError(fiber.StatusForbidden, "ERR_NOTIFICATION_FORBIDDEN")
 	}
 
