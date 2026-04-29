@@ -1,8 +1,6 @@
 package middleware
 
 import (
-	"log"
-
 	"be-file-uploader/internal/models"
 	"be-file-uploader/pkg/enums/role"
 
@@ -15,8 +13,6 @@ func RequirePermission(permission role.Permission) fiber.Handler {
 		if !ok {
 			return fiber.NewError(fiber.StatusUnauthorized, "ERR_UNAUTHORIZED")
 		}
-		log.Printf("user: %+v, roles: %+v", user.ID, user.Roles)
-
 		if !user.HasPermission(permission) {
 			return fiber.NewError(fiber.StatusForbidden, "ERR_NO_ACCESS")
 		}

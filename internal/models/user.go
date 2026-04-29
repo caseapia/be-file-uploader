@@ -23,8 +23,6 @@ type User struct {
 	LastIP      string                 `bun:"last_ip" json:"-"`
 	Useragent   string                 `bun:"useragent" json:"-"`
 	Private     map[string]interface{} `bun:"-" json:"private,omitempty"`
-	InviteID    int                    `bun:"invite" json:"-"`
-	Invite      Invite                 `bun:"rel:belongs-to,join:invite=id" json:"invite"`
 	Storage     []File                 `bun:"rel:has-many,join:id=uploaded_by" json:"images"`
 	UploadLimit int64                  `bun:"upload_limit,default:1073741824" json:"upload_limit"`
 	UsedStorage int64                  `bun:"used_storage,default:0" json:"used_storage"`

@@ -41,7 +41,7 @@ func (h *Handler) Register(ctx fiber.Ctx) error {
 		return err
 	}
 
-	user, access, refresh, err := h.authService.Register(ctx, req.Username, req.Password, req.InviteCode)
+	user, access, refresh, err := h.authService.Register(ctx, req.Username, req.Password)
 	if err != nil {
 		return err
 	}

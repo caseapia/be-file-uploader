@@ -15,9 +15,6 @@ func (r *Repository) LookupUserByName(ctx context.Context, name string) (*models
 		Model(user).
 		Where("u.username = ?", name).
 		Relation("Roles").
-		Relation("Invite").
-		Relation("Invite.Creator").
-		Relation("Invite.User").
 		Relation("Storage").
 		Relation("Storage.Uploader").
 		Relation("Albums").
@@ -35,9 +32,6 @@ func (r *Repository) LookupUserByID(ctx context.Context, id int) (*models.User, 
 		Model(user).
 		Where("u.id = ?", id).
 		Relation("Roles").
-		Relation("Invite").
-		Relation("Invite.Creator").
-		Relation("Invite.User").
 		Relation("Storage").
 		Relation("Storage.Uploader").
 		Relation("Albums").
@@ -55,9 +49,6 @@ func (r *Repository) LookupUsers(ctx context.Context, limit int) ([]models.User,
 	err := r.DB.NewSelect().
 		Model(&users).
 		Relation("Roles").
-		Relation("Invite").
-		Relation("Invite.Creator").
-		Relation("Invite.User").
 		Limit(limit).
 		Scan(ctx)
 	return users, err

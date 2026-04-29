@@ -5,6 +5,8 @@ import (
 	"math/big"
 )
 
+const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
 func ImageID() (string, error) {
 	codeLen := 12
 	code := make([]byte, codeLen)

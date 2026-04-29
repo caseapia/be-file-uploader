@@ -27,6 +27,7 @@ type File struct {
 	Comments     []FileComment  `bun:"rel:has-many,join:id=image_id" json:"comments,omitempty"`
 	Likes        []FileLike     `bun:"rel:has-many,join:id=image_id" json:"likes,omitempty"`
 	Downloads    int            `bun:"downloads,default:0" json:"downloads"`
+	CreatedAt    time.Time      `bun:"created_at,default:current_timestamp" json:"created_at"`
 }
 
 type FileLike struct {
