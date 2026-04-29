@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"mime/multipart"
 	"path"
 	"slices"
@@ -164,6 +165,10 @@ func (s *Service) DeleteFile(ctx fiber.Ctx, imageID int, requester *models.User)
 		requester.UsedStorage -= image.Size
 		if err = s.repo.DeleteFile(ctx.Context(), tx, image); err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, "ERR_IMAGE_DELETE")
+		}
+
+		if image.UploadedBy != requester.ID {
+			s.notify.CreateNotification(ctx.Context(), image.UploadedBy, fmt.Sprintf("NOTIFY_POST_DELETED_BY_MODERATOR+%s", image.OriginalName))
 		}
 
 		if _, err = s.repo.UpdateUser(ctx.Context(), tx, requester, "used_storage"); err != nil {
@@ -337,6 +342,7 @@ func (s *Service) ToggleLike(ctx fiber.Ctx, sender *models.User, imageID int, ad
 	}
 
 	if add {
+		s.notify.CreateNotification(ctx.Context(), image.UploadedBy, fmt.Sprintf("NOTIFY_IMAGE_LIKED+%s+%s", image.OriginalName, sender.Username))
 		return s.repo.AddLike(ctx.Context(), s.repo.DB, like)
 	}
 	return s.repo.RemoveLike(ctx.Context(), s.repo.DB, like)
@@ -386,6 +392,7 @@ func (s *Service) AddComment(ctx fiber.Ctx, sender *models.User, image int, cont
 			},
 		}
 
+		s.notify.CreateNotification(ctx.Context(), post.UploadedBy, fmt.Sprintf("NOTIFY_IMAGE_ADD_COMMENT+%s+%s", post.OriginalName, comment.Author.Username))
 		comment, err = s.repo.AddComment(ctx.Context(), tx, comment)
 		if err != nil {
 			return err

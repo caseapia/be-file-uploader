@@ -3,6 +3,7 @@ package user
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"be-file-uploader/internal/models"
 	role2 "be-file-uploader/pkg/enums/role"
@@ -46,6 +47,8 @@ func (s *Service) SetUploadLimit(ctx fiber.Ctx, userID int, newUploadLimit int64
 			return err
 		}
 
+		s.notify.CreateNotification(ctx.Context(), user.ID, fmt.Sprintf("NOTIFY_UPLOAD_LIMIT_CHANGED+%v", newUploadLimit))
+
 		return nil
 	})
 	if err != nil {
@@ -67,6 +70,7 @@ func (s *Service) AddUserInRole(ctx fiber.Ctx, sender *models.User, userID, role
 
 	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) error {
 		err = s.repo.AddUserInRole(ctx, tx, userID, roleID)
+		s.notify.CreateNotification(ctx.Context(), user.ID, fmt.Sprintf("NOTIFY_ADD_IN_ROLE+%s", role.Name))
 		if err != nil {
 			return err
 		}
@@ -97,6 +101,7 @@ func (s *Service) DeleteUserFromRole(ctx fiber.Ctx, sender *models.User, userID,
 
 	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) error {
 		err = s.repo.RemoveUserFromRole(ctx, tx, userID, roleID)
+		s.notify.CreateNotification(ctx.Context(), user.ID, fmt.Sprintf("NOTIFY_REMOVE_FROM_ROLE+%s", role.Name))
 		if err != nil {
 			return err
 		}
@@ -124,8 +129,10 @@ func (s *Service) VerifyUser(ctx fiber.Ctx, userID int) (user *models.User, err 
 	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) error {
 		if !user.IsVerified {
 			user.IsVerified = true
+			s.notify.CreateNotification(ctx.Context(), user.ID, "NOTIFY_VERIFY_SUCCESS")
 		} else {
 			user.IsVerified = false
+			s.notify.CreateNotification(ctx.Context(), user.ID, "NOTIFY_VERIFY_REMOVED")
 		}
 		user, err = s.repo.UpdateUser(ctx, tx, user, "is_verified")
 
@@ -138,7 +145,7 @@ func (s *Service) VerifyUser(ctx fiber.Ctx, userID int) (user *models.User, err 
 	return user, nil
 }
 
-func (s *Service) ResetUserAPIToken(ctx fiber.Ctx, sender *models.User, userID int) (user *models.User, err error) {
+func (s *Service) ResetUserAPIToken(ctx fiber.Ctx, userID int) (user *models.User, err error) {
 	user, err = s.repo.LookupUserByID(ctx.Context(), userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -147,11 +154,9 @@ func (s *Service) ResetUserAPIToken(ctx fiber.Ctx, sender *models.User, userID i
 		return nil, err
 	}
 
-	if sender.ID != userID && !sender.HasPermission(role2.ManageUsers) {
-		return nil, fiber.NewError(fiber.StatusForbidden, "ERR_NO_ACCESS")
-	}
-
 	user.ShareXToken = nil
+
+	s.notify.CreateNotification(ctx.Context(), user.ID, "NOTIFY_API_TOKEN_RESET")
 
 	user, err = s.repo.UpdateUser(ctx.Context(), s.repo.DB, user, "sharex_token")
 

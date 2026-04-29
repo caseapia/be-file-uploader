@@ -20,4 +20,5 @@ func (h *Handler) RegisterPrivateRoutes(router fiber.Router) {
 	groupAdmin.Delete("/role/delete", middleware.RequirePermission(role.ManageUsers), h.RemoveUserFromRole)
 	groupAdmin.Patch("/storage-limit/update", middleware.RequirePermission(role.ManageUsers), h.SetUploadLimit)
 	groupAdmin.Patch("/verify/:id", middleware.RequirePermission(role.ManageUsers), h.VerifyUser)
+	groupAdmin.Delete("/shareX/reset/:id", middleware.RequirePermission(role.ManageUsers), h.ResetUserAPIToken)
 }

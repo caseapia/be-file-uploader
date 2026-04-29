@@ -12,6 +12,7 @@ import (
 	"be-file-uploader/internal/handler/developer"
 	"be-file-uploader/internal/handler/file"
 	"be-file-uploader/internal/handler/invite"
+	"be-file-uploader/internal/handler/notification"
 	"be-file-uploader/internal/handler/role"
 	"be-file-uploader/internal/handler/user"
 	"be-file-uploader/internal/repository/mysql"
@@ -19,6 +20,7 @@ import (
 	authSrv "be-file-uploader/internal/service/auth"
 	storageSrv "be-file-uploader/internal/service/file"
 	inviteSrv "be-file-uploader/internal/service/invite"
+	notifySrv "be-file-uploader/internal/service/notification"
 	rolesSrv "be-file-uploader/internal/service/role"
 	userSrv "be-file-uploader/internal/service/user"
 	r2 "be-file-uploader/pkg/storage"
@@ -116,16 +118,19 @@ func CreateApp() (app *fiber.App, db *database.Database, err error) {
 
 	storage, err := r2.NewStorage(os.Getenv("R2_ACCESS_KEY"), os.Getenv("R2_SECRET_KEY"), os.Getenv("R2_BUCKET"), os.Getenv("R2_PUBLIC_URL"))
 
+	notifyService := notifySrv.NewService(webDB)
+	notifyHandler := notification.NewHandler(notifyService, webDB)
+
 	authService := authSrv.NewService(webDB)
 	authHandler := auth.NewHandler(authService)
 
-	userService := userSrv.NewService(webDB)
+	userService := userSrv.NewService(webDB, notifyService)
 	userHandler := user.NewHandler(userService, webDB)
 
 	inviteService := inviteSrv.NewService(webDB)
 	inviteHandler := invite.NewHandler(inviteService, webDB)
 
-	storageService := storageSrv.NewService(webDB, storage)
+	storageService := storageSrv.NewService(webDB, notifyService, storage)
 	storageHandler := file.NewHandler(storageService, userService, webDB)
 
 	developerHandler := developer.NewHandler(webDB)
@@ -149,6 +154,7 @@ func CreateApp() (app *fiber.App, db *database.Database, err error) {
 	developerHandler.RegisterPublicRoutes(public)
 	rolesHandler.RegisterPrivateRoutes(private)
 	albumHandler.RegisterPrivateRoutes(private)
+	notifyHandler.RegisterPrivateRoutes(private)
 
 	if *debug {
 		slog.Info("Registering routes...")

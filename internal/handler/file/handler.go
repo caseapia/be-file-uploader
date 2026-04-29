@@ -249,7 +249,7 @@ func (h *Handler) ShareXUpload(ctx fiber.Ctx) error {
 		OriginalName: fileHeader.Filename,
 		MimeType:     fileHeader.Header.Get("Content-Type"),
 		Size:         fileHeader.Size,
-		IsPrivate:    false,
+		IsPrivate:    true,
 	}
 
 	initResp, err := h.imageService.InitMultipartUpload(ctx.Context(), u, initReq)

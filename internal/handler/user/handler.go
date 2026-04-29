@@ -30,7 +30,7 @@ func (h *Handler) LookupMyAccount(ctx fiber.Ctx) error {
 		return err
 	}
 
-	return validation.Response(ctx, 200, acc)
+	return validation.Response(ctx, fiber.StatusOK, acc)
 }
 
 func (h *Handler) LookupProfile(ctx fiber.Ctx) error {
@@ -43,7 +43,7 @@ func (h *Handler) LookupProfile(ctx fiber.Ctx) error {
 		return err
 	}
 
-	return validation.Response(ctx, 200, acc)
+	return validation.Response(ctx, fiber.StatusOK, acc)
 }
 
 func (h *Handler) SetUploadLimit(ctx fiber.Ctx) error {
@@ -57,7 +57,7 @@ func (h *Handler) SetUploadLimit(ctx fiber.Ctx) error {
 		return err
 	}
 
-	return validation.Response(ctx, 200, target)
+	return validation.Response(ctx, fiber.StatusOK, target)
 }
 
 func (h *Handler) PopulateUserList(ctx fiber.Ctx) error {
@@ -70,7 +70,7 @@ func (h *Handler) PopulateUserList(ctx fiber.Ctx) error {
 		users = make([]models.User, 0)
 	}
 
-	return validation.Response(ctx, 200, users)
+	return validation.Response(ctx, fiber.StatusOK, users)
 }
 
 func (h *Handler) AddUserInRole(ctx fiber.Ctx) error {
@@ -86,7 +86,7 @@ func (h *Handler) AddUserInRole(ctx fiber.Ctx) error {
 		return err
 	}
 
-	return validation.Response(ctx, 200, u)
+	return validation.Response(ctx, fiber.StatusOK, u)
 }
 
 func (h *Handler) RemoveUserFromRole(ctx fiber.Ctx) error {
@@ -102,7 +102,7 @@ func (h *Handler) RemoveUserFromRole(ctx fiber.Ctx) error {
 		return err
 	}
 
-	return validation.Response(ctx, 200, u)
+	return validation.Response(ctx, fiber.StatusOK, u)
 }
 
 func (h *Handler) VerifyUser(ctx fiber.Ctx) error {
@@ -114,7 +114,7 @@ func (h *Handler) VerifyUser(ctx fiber.Ctx) error {
 		return err
 	}
 
-	return validation.Response(ctx, 200, u)
+	return validation.Response(ctx, fiber.StatusOK, u)
 }
 
 func (h *Handler) GenerateAPIToken(ctx fiber.Ctx) error {
@@ -125,5 +125,17 @@ func (h *Handler) GenerateAPIToken(ctx fiber.Ctx) error {
 		return err
 	}
 
-	return validation.Response(ctx, 200, token)
+	return validation.Response(ctx, fiber.StatusOK, token)
+}
+
+func (h *Handler) ResetUserAPIToken(ctx fiber.Ctx) error {
+	idStr := ctx.Params("id")
+	id, _ := strconv.Atoi(idStr)
+
+	u, err := h.userService.ResetUserAPIToken(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	return validation.Response(ctx, fiber.StatusOK, u)
 }
