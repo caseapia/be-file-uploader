@@ -2,6 +2,8 @@ package user
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"slices"
 
 	"be-file-uploader/internal/models"
@@ -15,6 +17,9 @@ import (
 func (s *Service) LookupAccount(ctx context.Context, sender *models.User, target int) (account *models.User, err error) {
 	account, err = s.repo.LookupUserByID(ctx, target)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fiber.NewError(fiber.StatusNotFound, "ERR_USER_NOTFOUND")
+		}
 		return nil, err
 	}
 
