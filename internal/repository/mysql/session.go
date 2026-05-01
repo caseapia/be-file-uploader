@@ -56,3 +56,13 @@ func (r *Repository) UpdateSession(ctx context.Context, tx bun.IDB, session mode
 		Exec(ctx)
 	return session, err
 }
+
+func (r *Repository) SearchUserSessions(ctx context.Context, user int) ([]models.Session, error) {
+	sessions := make([]models.Session, 0)
+
+	err := r.DB.NewSelect().
+		Model(&sessions).
+		Where("user_id = ?", user).
+		Scan(ctx)
+	return sessions, err
+}

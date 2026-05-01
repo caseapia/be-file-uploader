@@ -139,3 +139,14 @@ func (h *Handler) ResetUserAPIToken(ctx fiber.Ctx) error {
 
 	return validation.Response(ctx, fiber.StatusOK, u)
 }
+
+func (h *Handler) SearchSessions(ctx fiber.Ctx) error {
+	sender := account.GetUserFromContext(ctx)
+
+	sessions, err := h.repo.SearchUserSessions(ctx.Context(), sender.ID)
+	if err != nil {
+		return err
+	}
+
+	return validation.Response(ctx, fiber.StatusOK, sessions)
+}

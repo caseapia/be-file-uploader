@@ -67,57 +67,32 @@ func (s *Service) Login(ctx fiber.Ctx, username, password string) (user *models.
 
 func (s *Service) RefreshToken(ctx fiber.Ctx, refreshToken string) (access string, refresh string, err error) {
 	refreshHash := generate.HashToken(refreshToken)
-
-	session, err := s.repo.SearchSessionByRefreshHash(ctx, refreshHash)
-	if err != nil || session.IsActive == false || session.ExpiresAt.Before(time.Now()) {
-		slog.WithData(slog.M{
-			"error":        err,
-			"refreshToken": refreshToken,
-		}).Error("Refresh token lookup failed")
-		return "", "", fiber.NewError(fiber.StatusInternalServerError, "ERR_TOKEN_GENERATION")
-	}
-
-	user, err := s.repo.LookupUserByID(ctx, session.UserID)
-	if err != nil {
-		slog.WithData(slog.M{
-			"error": err,
-			"user":  user,
-		}).Error("User lookup failed")
-		return "", "", fiber.NewError(fiber.StatusInternalServerError, "ERR_USER_NOTFOUND")
-	}
-
 	ip := ctx.IP()
 	useragent := ctx.Get("X-User-Agent")
 
-	refresh, err = GenerateRefreshToken()
+	session, err := s.repo.SearchSessionByRefreshHash(ctx, refreshHash)
 	if err != nil {
-		slog.WithData(slog.M{
-			"error": err,
-			"user":  user,
-		}).Error("Refresh token generation failed")
-		return "", "", fiber.NewError(fiber.StatusInternalServerError, "ERR_TOKEN_GENERATION")
+		return "", "", fiber.NewError(fiber.StatusUnauthorized, "ERR_TOKEN_INVALID")
 	}
 
-	access, err = token.GenerateAccessToken(user.ID, 1, session.ID)
-	if err != nil {
-		slog.WithData(slog.M{
-			"error":   err,
-			"user":    user,
-			"refresh": refresh,
-		}).Error("Access token generation failed")
-		return "", "", fiber.NewError(fiber.StatusInternalServerError, "ERR_TOKEN_GENERATION")
+	if session.UserAgent != useragent {
+		slog.Warn("Session hijacking attempt? UA changed", "sid", session.ID, "old", session.UserAgent, "new", useragent)
 	}
 
-	session.RefreshHash = generate.HashToken(refresh)
+	newRefresh, _ := GenerateRefreshToken()
+	newAccess, _ := token.GenerateAccessToken(session.UserID, 1, session.ID)
+
+	session.RefreshHash = generate.HashToken(newRefresh)
 	session.ExpiresAt = time.Now().Add(7 * 24 * time.Hour)
 	session.IPAddress = ip
 	session.UserAgent = useragent
+	session.LastActiveAt = time.Now()
 
-	if err := s.repo.CreateSession(ctx, s.repo.DB, session); err != nil {
+	if _, err := s.repo.UpdateSession(ctx, s.repo.DB, *session); err != nil {
 		return "", "", err
 	}
 
-	return access, refresh, nil
+	return newAccess, newRefresh, nil
 }
 
 func (s *Service) Logout(ctx fiber.Ctx, session *models.Session, user *models.User) error {
