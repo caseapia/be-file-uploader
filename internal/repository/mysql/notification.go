@@ -15,6 +15,7 @@ func (r *Repository) LookupNotificationsByUserID(ctx context.Context, user *mode
 		Model(&notifications).
 		Where("user_id = ?", user.ID).
 		Order("is_readed ASC").
+		Order("created_at DESC").
 		Scan(ctx)
 
 	return &notifications, err
