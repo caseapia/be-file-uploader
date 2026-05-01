@@ -31,3 +31,14 @@ func (r *Repository) EditTask(ctx context.Context, tx bun.IDB, task models.Roadm
 		Exec(ctx)
 	return err
 }
+
+func (r *Repository) SearchTaskByID(ctx context.Context, id int) (*models.RoadmapTask, error) {
+	task := new(models.RoadmapTask)
+
+	err := r.DB.NewSelect().
+		Model(task).
+		Where("id = ?", id).
+		Scan(ctx)
+
+	return task, err
+}

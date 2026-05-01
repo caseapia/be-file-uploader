@@ -1,6 +1,8 @@
 package roadmap
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -46,15 +48,20 @@ func (s *Service) AddTask(ctx fiber.Ctx, sender *models.User, title string) (tas
 }
 
 func (s *Service) EditTask(ctx fiber.Ctx, sender *models.User, id int, title string, status roadmapEnum.Status) (task *models.RoadmapTask, err error) {
+	task, err = s.repo.SearchTaskByID(ctx.Context(), id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fiber.NewError(fiber.StatusNotFound, "ERR_TASK_NOTFOUND")
+		}
+		return nil, err
+	}
+
 	now := time.Now()
 
-	task = &models.RoadmapTask{
-		ID:        id,
-		Title:     title,
-		Status:    status,
-		UpdatedAt: &now,
-		UpdatorID: &sender.ID,
-	}
+	task.Title = title
+	task.Status = status
+	task.UpdatedAt = &now
+	task.UpdatorID = &sender.ID
 
 	err = s.repo.EditTask(ctx.Context(), s.repo.DB, *task)
 	if err != nil {
