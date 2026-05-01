@@ -18,7 +18,7 @@ func ValidateSession(r *mysql.Repository, session *models.Session) error {
 		return fiber.NewError(fiber.StatusUnauthorized, "ERR_SESSION_NOTFOUND")
 	}
 
-	if !session.IsActive {
+	if session.IsActive == false {
 		slog.Error("Session revoked", "session_id", session.ID)
 		return fiber.NewError(fiber.StatusForbidden, "ERR_USER_SESSION_REVOKED")
 	}
@@ -32,18 +32,11 @@ func ValidateSession(r *mysql.Repository, session *models.Session) error {
 			"current_time", now,
 		)
 
-		deletionThreshold := session.ExpiresAt.Add(2 * 24 * time.Hour)
-
-		if now.After(deletionThreshold) {
-			go func(sid string) {
-				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-				defer cancel()
-				_, _ = r.TerminateSession(ctx, r.DB, sid)
-				slog.Info("Session permanently deleted after grace period", "session_id", sid)
-			}(session.ID)
-		} else {
-			slog.Info("Session expired but kept in DB (grace period)", "session_id", session.ID)
-		}
+		go func(sid string) {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_, _ = r.TerminateSession(ctx, r.DB, sid)
+		}(session.ID)
 
 		return fiber.NewError(fiber.StatusForbidden, "ERR_USER_SESSION_EXPIRED")
 	}
