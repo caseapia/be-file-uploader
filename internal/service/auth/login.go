@@ -46,7 +46,7 @@ func (s *Service) Login(ctx fiber.Ctx, username, password string) (user *models.
 		RefreshHash:  refreshHash,
 	}
 
-	if err = s.repo.CreateSession(ctx.Context(), session); err != nil {
+	if err = s.repo.CreateSession(ctx.Context(), s.repo.DB, session); err != nil {
 		slog.WithData(slog.M{"error": err}).Error("Session creation failed")
 		return nil, "", "", fiber.NewError(fiber.StatusInternalServerError, "ERR_SESSION_CREATION")
 	}
@@ -113,7 +113,7 @@ func (s *Service) RefreshToken(ctx fiber.Ctx, refreshToken string) (access strin
 	session.IPAddress = ip
 	session.UserAgent = useragent
 
-	if err := s.repo.CreateSession(ctx, session); err != nil {
+	if err := s.repo.CreateSession(ctx, s.repo.DB, session); err != nil {
 		return "", "", err
 	}
 
@@ -138,7 +138,7 @@ func (s *Service) Logout(ctx fiber.Ctx, session *models.Session, user *models.Us
 	session.UserAgent = ctx.Get("X-User-Agent")
 	session.ExpiresAt = time.Now()
 
-	err = s.repo.CreateSession(ctx, session)
+	err = s.repo.CreateSession(ctx, s.repo.DB, session)
 	if err != nil {
 		slog.WithData(slog.M{
 			"error":   err,

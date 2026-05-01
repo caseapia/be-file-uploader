@@ -12,6 +12,7 @@ import (
 	"be-file-uploader/internal/handler/developer"
 	"be-file-uploader/internal/handler/file"
 	"be-file-uploader/internal/handler/notification"
+	"be-file-uploader/internal/handler/roadmap"
 	"be-file-uploader/internal/handler/role"
 	"be-file-uploader/internal/handler/user"
 	"be-file-uploader/internal/repository/mysql"
@@ -19,6 +20,7 @@ import (
 	authSrv "be-file-uploader/internal/service/auth"
 	storageSrv "be-file-uploader/internal/service/file"
 	notifySrv "be-file-uploader/internal/service/notification"
+	roadmapSrv "be-file-uploader/internal/service/roadmap"
 	rolesSrv "be-file-uploader/internal/service/role"
 	userSrv "be-file-uploader/internal/service/user"
 	r2 "be-file-uploader/pkg/storage"
@@ -136,6 +138,9 @@ func CreateApp() (app *fiber.App, db *database.Database, err error) {
 	albumService := albumSrv.NewService(webDB)
 	albumHandler := album.NewHandler(albumService, webDB)
 
+	roadmapService := roadmapSrv.NewService(webDB, notifyService)
+	roadmapHandler := roadmap.NewHandler(roadmapService)
+
 	api := app.Group("/v1/api")
 	public := api.Group("/public")
 	private := api.Group("/private").Use(auth.Middleware(authService, webDB))
@@ -149,6 +154,8 @@ func CreateApp() (app *fiber.App, db *database.Database, err error) {
 	rolesHandler.RegisterPrivateRoutes(private)
 	albumHandler.RegisterPrivateRoutes(private)
 	notifyHandler.RegisterPrivateRoutes(private)
+	roadmapHandler.RegisterPublicRoutes(public)
+	roadmapHandler.RegisterPrivateRoutes(private)
 
 	if *debug {
 		slog.Info("Registering routes...")

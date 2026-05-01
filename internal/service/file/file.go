@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"mime/multipart"
+	"os"
 	"path"
 	"slices"
 	"strconv"
@@ -60,6 +61,15 @@ func (s *Service) processImageFile(fh *multipart.FileHeader) ([]byte, string, st
 }
 
 func (s *Service) generateStorageKey(userID int, imgID, ext string) string {
+	if os.Getenv("APP_MODE") == "DEV" {
+		return path.Join(
+			"images/dev",
+			strconv.FormatInt(int64(userID), 10),
+			time.Now().Format("2006-01"),
+			imgID+ext,
+		)
+	}
+
 	return path.Join(
 		"images",
 		strconv.FormatInt(int64(userID), 10),
