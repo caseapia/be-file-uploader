@@ -6,7 +6,7 @@ The API uses a two-token model backed by a persistent session row:
 
 - Access token: short-lived JWT, sent on every private request.
 - Refresh token: opaque random token, exchanged for a new token pair.
-- Session row: DB record that ties a user, refresh-token hash, IP metadata, and expiry together.
+- Session row: DB record that ties a user, refresh-token hash, IP metadata, user-agent metadata, active state, and expiry together.
 
 ## Access Token
 
@@ -54,6 +54,8 @@ During login and register:
    - `last_active_at`
 5. An access token is generated with the session ID in `sid`.
 
+Registration currently requires only `username` and `password`; it does not consume an invite code.
+
 ### Refresh
 
 During refresh:
@@ -70,6 +72,16 @@ Result:
 - old refresh token becomes invalid
 - new refresh token must be stored immediately
 - existing access token should also be replaced immediately
+
+### Logout
+
+`DELETE /private/auth/logout` disables the current session:
+
+- `is_active` is set to `false`
+- `expires_at` is set to the current time
+- IP and user-agent metadata are updated
+
+After logout, the same access token should fail private middleware because the backing session is inactive.
 
 ## How Private Requests Are Validated
 
@@ -113,9 +125,28 @@ Recommended for:
 
 Current code checks cookie first, then header.
 
+## ShareX Token
+
+ShareX upload does not use JWT auth. It uses a per-user API token:
+
+1. Authenticated users with `UPLOAD_FILES` call `GET /private/user/shareX/generate`.
+2. The returned token is stored in `users.sharex_token`.
+3. ShareX sends the token as a multipart form field named `token` to `POST /public/storage/upload/sharex`.
+4. Admins with `MANAGE_USERS` can reset another user's token with `DELETE /private/user/admin/shareX/reset/:id`.
+
+ShareX upload returns:
+
+```json
+{
+  "url": "https://cdn.example.com/images/..."
+}
+```
+
+This response is intentionally not wrapped in `response`.
+
 ## `X-User-Agent`
 
-The app stores `X-User-Agent` in session metadata during login and refresh.
+The app stores `X-User-Agent` in session metadata during login, refresh, and logout.
 
 Recommended pattern:
 
@@ -127,7 +158,7 @@ Why it matters:
 
 - useful for audit logs
 - useful when inspecting session anomalies
-- part of the data updated on refresh
+- part of the data updated on refresh/logout
 
 ## Frontend Integration
 
@@ -138,6 +169,7 @@ Why it matters:
 - On `401` or expired-access-token flow, call `/public/auth/refresh`.
 - Replace both tokens from the refresh response.
 - Retry the original request once.
+- Call `/private/auth/logout` when the user explicitly signs out.
 
 ### Example Fetch Wrapper
 
@@ -186,54 +218,43 @@ async function apiFetch(path: string, init: RequestInit = {}) {
 }
 ```
 
-### Frontend State You Usually Need
-
-- `access_token`
-- `refresh_token`
-- `currentUser`
-- `roles`
-- auth loading state
-- auth recovery state for refresh retry
-
 ### Upload Integration
 
-For `/private/storage/upload`:
+Private upload is a three-step flow:
 
-- use `FormData`
-- append file under the key `image`
-- do not set JSON content type manually
+1. `POST /private/storage/upload/init` with JSON metadata.
+2. `POST /private/storage/upload/chunk` with `multipart/form-data`.
+3. `POST /private/storage/upload/complete` with uploaded part metadata.
 
-Example:
+Example chunk body fields:
 
-```ts
-const form = new FormData();
-form.append("image", file);
+- `upload_id`
+- `key`
+- `part_number`
+- `chunk`
 
-await fetch("/v1/api/private/storage/upload", {
-  method: "POST",
-  headers: {
-    Authorization: `Bearer ${accessToken}`,
-    "X-User-Agent": "frontend/1.0.0",
-  },
-  body: form,
-});
-```
+Do not set JSON content type manually for the chunk request.
 
 ## Permission Gates
 
-JWT validation only proves identity. Some routes then apply `RequirePermission(...)`.
+JWT validation only proves identity. Many routes then apply `RequirePermission(...)`.
 
 Permissions used by current routes:
 
-- `MANAGE_USERS`
+- `UPLOAD_FILES`
 - `VIEW_OWN_FILES`
 - `VIEW_OTHER_FILES`
-- intended: `VIEW_OTHER_PROFILES`
+- `DOWNLOAD_OTHERS_FILES`
+- `VIEW_OTHER_PROFILES`
+- `MANAGE_USERS`
+- `MANAGE_FILES`
+- `MANAGE_ROLES`
+- `VIEW_PRIVATE_DATA`
+- `DEVELOPER`
 
 ## Known Caveats
 
 - Invalid refresh-token cases currently collapse into `500 ERR_TOKEN_GENERATION` instead of a more specific `401/403` branch.
-- `user/lookup/:id` permission logic is currently stricter than intended.
-- `storage/delete` currently requires both ownership and `MANAGE_FILES`.
-
-These caveats matter for frontend behavior and for open-source contributors evaluating the current API.
+- Middleware permission denials often use Fiber's generic `Forbidden` response.
+- Some malformed JWT errors may expose JWT library text instead of normalized project error codes.
+- ShareX upload uses token auth and a custom unwrapped response shape.

@@ -10,36 +10,46 @@ This folder contains developer-facing and frontend-facing documentation for `be-
 
 ## Documents
 
-| File                                                                               | Purpose                                                                                            |
-|------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
-| [getting-started.md](getting-started.md)                                           | Local setup, required infrastructure, environment variables, runtime flags, and first-run workflow |
-| [api-reference.md](api-reference.md)                                               | Full route catalog, request/response contracts, auth rules, and frontend notes per endpoint        |
-| [authentication.md](authentication.md)                                             | JWT + refresh-token flow, session model, browser/API-client integration guidance                   |
-| [errors.md](errors.md)                                                             | Response envelope, validation behavior, known error codes, and frontend error-handling guidance    |
-| [architecture.md](architecture.md)                                                 | Project structure, request flow, persistence model, permissions, and known implementation caveats  |
-| [insomnia/be-file-uploader.insomnia.json](insomnia/be-file-uploader.insomnia.json) | Importable Insomnia collection with environments, auth automation, and storage route helpers       |
+| File                                                                               | Purpose                                                                                         |
+|------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------|
+| [getting-started.md](getting-started.md)                                           | Local setup, infrastructure, environment variables, runtime flags, and first-run workflow        |
+| [api-reference.md](api-reference.md)                                               | Full route catalog, request/response contracts, auth rules, permissions, and frontend notes      |
+| [authentication.md](authentication.md)                                             | JWT + refresh-token flow, session model, logout behavior, ShareX token usage, and client advice |
+| [errors.md](errors.md)                                                             | Response envelope, validation behavior, known error codes, and frontend error-handling guidance |
+| [architecture.md](architecture.md)                                                 | Project structure, request flow, persistence model, permissions, and implementation caveats      |
+| [insomnia/be-file-uploader.insomnia.json](insomnia/be-file-uploader.insomnia.json) | Importable Insomnia collection for API exploration                                              |
 
 ## What This Service Does
 
 `be-file-uploader` is a Go/Fiber REST API that provides:
 
-- Invite-based user registration.
-- Login with DB-backed sessions.
+- Username/password registration and login.
+- DB-backed sessions.
 - JWT access tokens plus rotating refresh tokens.
-- User profile lookup.
-- Invite management for privileged users.
-- Image upload/list/delete endpoints backed by object storage.
+- User profile lookup and user administration.
+- Role and permission administration.
+- Chunked file upload/list/delete endpoints backed by object storage.
+- Albums, likes, comments, downloads, and notifications.
+- Public roadmap listing with developer-only roadmap editing.
+- ShareX token generation and public ShareX upload.
 
 ## API Summary
 
 Base prefix: `/v1/api`
 
-| Scope           | Routes                                                                                                                                                                             |
-|-----------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Public          | `POST /public/auth/register`, `POST /public/auth/login`, `POST /public/auth/refresh`                                                                                               |
-| Private user    | `GET /private/user/me`, `GET /private/user/lookup/:id`                                                                                                                             |
-| Private storage | `POST /private/storage/upload`, `POST /private/storage/delete`, `GET /private/storage/my`                                                                                          |
-| Private admin   | `GET /private/invite/admin/list`, `POST /private/invite/admin/create`, `DELETE /private/invite/admin/revoke`, `GET /private/image/admin/list`, `GET /private/image/admin/list/:id` |
+| Scope                 | Routes |
+|-----------------------|--------|
+| Public auth           | `POST /public/auth/register`, `POST /public/auth/login`, `POST /public/auth/refresh` |
+| Public utility        | `GET /public/ping`, `GET /public/roadmap/list`, `POST /public/storage/upload/sharex` |
+| Private auth          | `DELETE /private/auth/logout` |
+| Private user          | `GET /private/user/me`, `GET /private/user/lookup/:id`, `GET /private/user/shareX/generate` |
+| Private user admin    | `GET /private/user/admin/users`, `PUT /private/user/admin/role/add`, `DELETE /private/user/admin/role/delete`, `PATCH /private/user/admin/storage-limit/update`, `PATCH /private/user/admin/verify/:id`, `DELETE /private/user/admin/shareX/reset/:id` |
+| Private storage       | `POST /private/storage/upload/init`, `POST /private/storage/upload/chunk`, `POST /private/storage/upload/complete`, `POST /private/storage/delete`, `GET /private/storage/my`, `GET /private/storage/list`, `GET /private/storage/list/:id`, `GET /private/storage/post/:id` |
+| Private post actions  | `PATCH /private/storage/post/action/like/:id`, `DELETE /private/storage/post/action/likeRemove/:id`, `GET /private/storage/post/action/download/:id`, `POST /private/storage/post/action/addComment` |
+| Private albums        | `POST /private/album/create`, `DELETE /private/album/delete/:id`, `GET /private/album/lookup/:id`, `GET /private/album/lookupAll` |
+| Private roles admin   | `GET /private/roles/admin/all`, `POST /private/roles/admin/create`, `PATCH /private/roles/admin/edit`, `DELETE /private/roles/admin/delete` |
+| Private notifications | `GET /private/notifications/my`, `PATCH /private/notifications/action/read/:id` |
+| Private roadmap admin | `POST /private/roadmap/admin/task/add`, `PATCH /private/roadmap/admin/task/edit` |
 
 ## Response Conventions
 
@@ -72,17 +82,17 @@ Unhandled internal failures use:
 ## Frontend Quick Notes
 
 - Private endpoints accept the access token either in `Authorization: Bearer <jwt>` or in the `auth_token` cookie.
-- The server stores `X-User-Agent` in session metadata and updates it on refresh. Set it consistently from frontend clients.
+- The server stores `X-User-Agent` in session metadata during login, refresh, and logout. Set it consistently from frontend clients.
 - Refresh token rotation is mandatory: after every successful `/public/auth/refresh`, overwrite both stored tokens immediately.
-- Image upload uses `multipart/form-data` with a single file field named `image`.
-- The collection export already saves tokens, invite IDs, and uploaded image IDs into the active environment.
+- Uploads are multipart and currently use an init/chunk/complete flow instead of a single private upload request.
+- Public ShareX upload uses a generated ShareX token and returns `{ "url": "..." }` without the standard `response` wrapper.
+- Private file URLs may be blanked in responses when the requester is not allowed to view the underlying object URL.
 
 ## Important Caveats
 
-The docs intentionally describe both the intended contracts and a few implementation details that matter in practice:
+The docs intentionally describe both the intended contracts and implementation details that matter in practice:
 
-- `user/lookup/:id` currently has permission logic that can reject lookups unexpectedly. See [api-reference.md](api-reference.md) and [architecture.md](architecture.md).
-- `storage/delete` currently behaves more strictly than the route name suggests. See the route notes before wiring a delete button in the frontend.
+- Registration no longer consumes an invite code; it creates a user and assigns role ID `1`.
 - Storage configuration variables are required for upload/delete flows, but the app currently does not fail fast when storage initialization fails.
-
-Those caveats are documented because this repository is expected to be consumed as open source and integrators need the current behavior, not only the intended one.
+- Some path parameters are converted with `strconv.Atoi` and ignore conversion errors, so invalid IDs can behave like `0`.
+- The Insomnia export may not include every newer route. Use [api-reference.md](api-reference.md) as the current route source of truth.

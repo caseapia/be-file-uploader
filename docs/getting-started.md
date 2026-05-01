@@ -5,21 +5,28 @@
 - Go `1.25.0` according to [`go.mod`](../go.mod)
 - Fiber v3
 - MySQL
+- Redis
 - Bun ORM
-- S3-compatible object storage via Yandex Object Storage client configuration
+- S3-compatible object storage configured for Yandex Object Storage
 
 ## Prerequisites
 
 Before starting the API locally you need:
 
 - A MySQL database reachable from the app.
-- A schema containing at least the tables used by the Bun models:
+- A Redis instance reachable from the app.
+- A schema containing the tables used by the Bun models:
   - `users`
   - `roles`
   - `user_roles`
-  - `invites`
   - `sessions`
-  - `images`
+  - `files`
+  - `files_comments`
+  - `files_downloads`
+  - `files_likes`
+  - `albums`
+  - `notifications`
+  - `roadmap`
 - At least one default role row that can be assigned during registration.
   - Current code adds every newly registered user to role ID `1`.
 - If you need upload/delete testing, valid object-storage credentials and bucket/public URL settings.
@@ -36,8 +43,8 @@ cp .env.example .env
 
 | Variable | Required | Example | Notes |
 | --- | --- | --- | --- |
-| `APP_MODE` | no | `DEV` | Enables Bun SQL logging when equal to `DEV` |
-| `APP_PORT` | no | `8080` | HTTP listen port |
+| `APP_MODE` | no | `DEV` | Enables Bun SQL logging when equal to `DEV`; also prefixes upload keys with `images/dev` |
+| `APP_PORT` | no | `8080` | HTTP listen port; defaults to `8080` when empty |
 | `JWT_SECRET` | yes | `change-me` | Shared HMAC secret used for access-token signing |
 
 ### Database
@@ -50,6 +57,14 @@ cp .env.example .env
 | `DB_PORT` | yes | `3306` | MySQL port |
 | `DB_NAME` | yes | `fileuploader` | Database name |
 
+### Redis
+
+| Variable | Required | Example | Notes |
+| --- | --- | --- | --- |
+| `REDIS_HOST` | yes | `127.0.0.1` | Redis host |
+| `REDIS_PORT` | yes | `6379` | Redis port |
+| `REDIS_PASSWORD` | no | `redis-password` | Leave empty for a local Redis without auth |
+
 ### Object Storage
 
 These variables are required by upload/delete flows.
@@ -58,8 +73,8 @@ These variables are required by upload/delete flows.
 | --- | --- | --- | --- |
 | `R2_ACCESS_KEY` | yes | `...` | Access key passed into storage client |
 | `R2_SECRET_KEY` | yes | `...` | Secret key passed into storage client |
-| `r2_bucket` | yes | `be-file-uploader-dev` | Exact lowercase key expected by current code |
-| `r2_public_url` | yes | `https://cdn.example.com` | Exact lowercase key expected by current code |
+| `R2_BUCKET` | yes | `be-file-uploader-dev` | Bucket name passed into storage client |
+| `R2_PUBLIC_URL` | yes | `https://cdn.example.com` | Public base URL used to build file URLs |
 
 ### Reserved OAuth Variables
 
@@ -121,6 +136,7 @@ Current allowed origins:
 
 - `http://localhost:3000`
 - `http://localhost:8080`
+- `https://uploader.dontkillme.lol`
 
 Current allowed request headers:
 
@@ -131,6 +147,8 @@ Current allowed request headers:
 - `Cache-Control`
 - `X-Request-Fingerprint`
 - `X-User-Agent`
+- `Access-Control-Allow-Origin`
+- `X-Locale`
 
 Current allowed methods:
 
@@ -149,28 +167,31 @@ To change CORS rules, edit [`internal/app/app.go`](../internal/app/app.go).
 
 1. Create `.env` from `.env.example`.
 2. Ensure MySQL schema exists and the app can connect.
-3. Seed roles and at least one privileged user if you need invite administration.
-4. If you want to test uploads, configure object storage variables.
-5. Start the server.
-6. Import the Insomnia collection from [`docs/insomnia/be-file-uploader.insomnia.json`](insomnia/be-file-uploader.insomnia.json).
-7. Use `Create invite` as an admin, then `Register`, then `Login` or `Refresh` as needed.
+3. Ensure Redis is reachable.
+4. Seed roles, including role ID `1`, and add privileged roles/users if you need admin routes.
+5. If you want to test uploads, configure object storage variables.
+6. Start the server.
+7. Import the Insomnia collection from [`docs/insomnia/be-file-uploader.insomnia.json`](insomnia/be-file-uploader.insomnia.json), or call the routes from [api-reference.md](api-reference.md).
+8. Register, log in, then use the returned access token for private routes.
 
 ## Database / Seed Expectations
 
-The codebase does not currently ship migrations or seeders in this repository. Contributors need to know the following assumptions:
+SQL files are present in [`migrations`](../migrations), but there is no migration runner wired into application startup. Contributors need to know the following assumptions:
 
 - Registration attaches users to role ID `1`.
-- Invite creation requires a role permission `MANAGE_USERS`.
-- Admin image listing requires `VIEW_OTHER_FILES`.
-- Profile lookup for other users is intended to depend on `VIEW_OTHER_PROFILES`, but current behavior is stricter due to service logic.
-
-If you open-source this repository, consider adding migrations later. Until then, document the schema externally or provide SQL bootstrap scripts.
+- User administration requires `MANAGE_USERS`.
+- Role administration requires `MANAGE_ROLES`.
+- Uploads and album mutations require `UPLOAD_FILES`.
+- Own file listing requires `VIEW_OWN_FILES`.
+- Cross-user file listing and post actions require `VIEW_OTHER_FILES`.
+- Download action requires `DOWNLOAD_OTHERS_FILES`.
+- Roadmap editing requires `DEVELOPER`.
 
 ## Storage Caveat
 
-`CreateApp()` initializes object storage but does not stop startup if storage creation fails. That means:
+`CreateApp()` initializes object storage and stores the returned pointer even if initialization returns an error. That means:
 
 - the server can boot even with broken upload configuration
 - upload/delete requests may fail later at runtime
 
-For local development, validate storage env vars before testing `/private/storage/*`.
+For local development, validate storage env vars before testing `/private/storage/*` or `/public/storage/upload/sharex`.
