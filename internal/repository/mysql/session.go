@@ -48,3 +48,11 @@ func (r *Repository) TerminateSession(ctx context.Context, tx bun.IDB, sessionID
 
 	return true, err
 }
+
+func (r *Repository) UpdateSession(ctx context.Context, tx bun.IDB, session models.Session) (models.Session, error) {
+	_, err := tx.NewUpdate().
+		Model(&session).
+		WherePK().
+		Exec(ctx)
+	return session, err
+}

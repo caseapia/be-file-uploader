@@ -138,7 +138,7 @@ func (s *Service) Logout(ctx fiber.Ctx, session *models.Session, user *models.Us
 	session.UserAgent = ctx.Get("X-User-Agent")
 	session.ExpiresAt = time.Now()
 
-	err = s.repo.CreateSession(ctx, s.repo.DB, session)
+	_, err = s.repo.UpdateSession(ctx, s.repo.DB, *session)
 	if err != nil {
 		slog.WithData(slog.M{
 			"error":   err,
