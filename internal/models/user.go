@@ -33,7 +33,7 @@ type User struct {
 	ShareXToken *string                `bun:"sharex_token" json:"-"`
 	LastSeen    time.Time              `bun:"last_seen,default:current_timestamp" json:"last_seen"`
 	GeoString   string                 `bun:"geo_string" json:"-"`
-	Geolocation *Geolocation           `bun:"-" json:"-"`
+	Geolocation *Geolocation           `bun:"-" json:"geolocation,omitempty"`
 }
 
 type UserRole struct {
