@@ -117,7 +117,7 @@ func CreateApp() (app *fiber.App, db *database.Database, err error) {
 		AllowCredentials: true,
 	}))
 
-	geoService, err := geo.New("data/IP2LOCATION-LITE-DB11.BIN")
+	geoService, err := geo.New("data/IP2LOCATION-LITE-DB11.IPV6.BIN")
 	if err != nil {
 		slog.Fatalf("geo init error: %s", err)
 	}
