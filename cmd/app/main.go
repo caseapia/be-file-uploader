@@ -38,7 +38,7 @@ func main() {
 
 	<-quit
 
-	log.Println("Завершение работы сервера...")
+	log.Println("Server is shutting down...")
 	if err := appInstance.Shutdown(); err != nil {
 		log.Printf("Ошибка при остановке Fiber: %v", err)
 	}

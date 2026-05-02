@@ -23,6 +23,7 @@ import (
 	roadmapSrv "be-file-uploader/internal/service/roadmap"
 	rolesSrv "be-file-uploader/internal/service/role"
 	userSrv "be-file-uploader/internal/service/user"
+	"be-file-uploader/pkg/geo"
 	r2 "be-file-uploader/pkg/storage"
 
 	"github.com/gofiber/fiber/v3"
@@ -44,7 +45,7 @@ func CreateApp() (app *fiber.App, db *database.Database, err error) {
 		return nil, nil, err
 	}
 
-	webDB := mysql.NewRepository(db.Web, db.Redis)
+	webDB := mysql.NewRepository(db.Web)
 
 	app = fiber.New(fiber.Config{
 		ServerHeader:  "",
@@ -116,12 +117,18 @@ func CreateApp() (app *fiber.App, db *database.Database, err error) {
 		AllowCredentials: true,
 	}))
 
+	geoService, err := geo.New("data/IP2LOCATION-LITE-DB11.BIN")
+	if err != nil {
+		slog.Fatalf("geo init error: %s", err)
+	}
+	defer geoService.Close()
+
 	storage, err := r2.NewStorage(os.Getenv("R2_ACCESS_KEY"), os.Getenv("R2_SECRET_KEY"), os.Getenv("R2_BUCKET"), os.Getenv("R2_PUBLIC_URL"))
 
 	notifyService := notifySrv.NewService(webDB)
 	notifyHandler := notification.NewHandler(notifyService, webDB)
 
-	authService := authSrv.NewService(webDB)
+	authService := authSrv.NewService(webDB, geoService)
 	authHandler := auth.NewHandler(authService)
 
 	userService := userSrv.NewService(webDB, notifyService)
@@ -143,7 +150,7 @@ func CreateApp() (app *fiber.App, db *database.Database, err error) {
 
 	api := app.Group("/v1/api")
 	public := api.Group("/public")
-	private := api.Group("/private").Use(auth.Middleware(authService, webDB))
+	private := api.Group("/private").Use(auth.Middleware(authService, geoService, webDB))
 
 	authHandler.RegisterPublicRoutes(public)
 	authHandler.RegisterPrivateRoutes(private)

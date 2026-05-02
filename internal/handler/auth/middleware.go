@@ -2,12 +2,14 @@ package auth
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
 	"be-file-uploader/internal/models"
 	"be-file-uploader/internal/repository/mysql"
 	"be-file-uploader/internal/service/auth"
+	"be-file-uploader/pkg/geo"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gookit/slog"
@@ -51,7 +53,7 @@ func ValidateSession(r *mysql.Repository, session *models.Session) error {
 	return nil
 }
 
-func Middleware(auth *auth.Service, repo *mysql.Repository) fiber.Handler {
+func Middleware(auth *auth.Service, geo *geo.Service, repo *mysql.Repository) fiber.Handler {
 	return func(ctx fiber.Ctx) error {
 		token := extractToken(ctx)
 		if token == "" {
@@ -62,13 +64,14 @@ func Middleware(auth *auth.Service, repo *mysql.Repository) fiber.Handler {
 		useragent := ctx.Get("X-User-Agent")
 		rayid := ctx.Get("Cf-Ray")
 		locale := ctx.Get("X-Locale")
+		country, city := geo.GetGeoString(ip)
 
 		user, claims, err := auth.ParseJWT(token)
 		if err != nil {
 			return err
 		}
 
-		_, err = repo.UpdateUser(ctx.Context(), repo.DB, &models.User{ID: user.ID, LastIP: ip, Useragent: useragent, CFRayID: rayid, Locale: locale}, "last_ip", "useragent", "cf_ray_id", "locale")
+		_, err = repo.UpdateUser(ctx.Context(), repo.DB, &models.User{ID: user.ID, LastIP: ip, Useragent: useragent, CFRayID: rayid, Locale: locale, LastSeen: time.Now(), GeoString: fmt.Sprintf("%s, %s", country, city)}, "last_ip", "useragent", "cf_ray_id", "locale", "last_seen", "geo_string")
 		if err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, "ERR_DATABASE_UPDATE")
 		}

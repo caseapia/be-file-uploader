@@ -53,6 +53,7 @@ require (
 	github.com/gofiber/utils/v2 v2.0.2 // indirect
 	github.com/gookit/goutil v0.7.4 // indirect
 	github.com/gookit/gsr v0.1.1 // indirect
+	github.com/ip2location/ip2location-go/v9 v9.8.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/klauspost/compress v1.18.5 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.11 // indirect
@@ -78,4 +79,5 @@ require (
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/term v0.41.0 // indirect
 	golang.org/x/text v0.35.0 // indirect
+	lukechampine.com/uint128 v1.2.0 // indirect
 )

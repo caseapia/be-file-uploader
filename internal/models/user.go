@@ -31,6 +31,8 @@ type User struct {
 	Albums      []Album                `bun:"rel:has-many,join:id=created_by" json:"albums"`
 	Locale      string                 `bun:"locale" json:"-"`
 	ShareXToken *string                `bun:"sharex_token" json:"-"`
+	LastSeen    time.Time              `bun:"last_seen,default:current_timestamp" json:"last_seen"`
+	GeoString   string                 `bun:"geo_string" json:"geo"`
 }
 
 type UserRole struct {

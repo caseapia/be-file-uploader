@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"fmt"
 	"time"
 
 	"be-file-uploader/internal/models"
@@ -32,18 +33,19 @@ func (s *Service) Login(ctx fiber.Ctx, username, password string) (user *models.
 
 	ip := ctx.IP()
 	useragent := ctx.Get("X-User-Agent")
+	country, city := s.geo.GetGeoString(ip)
 
 	refreshHash := generate.HashToken(refreshToken)
 	session := &models.Session{
-		ID:           sessionID,
-		UserID:       user.ID,
-		CreatedAt:    time.Now(),
-		ExpiresAt:    time.Now().Add(7 * 24 * time.Hour),
-		IsActive:     true,
-		IPAddress:    ip,
-		UserAgent:    useragent,
-		LastActiveAt: time.Now(),
-		RefreshHash:  refreshHash,
+		ID:          sessionID,
+		UserID:      user.ID,
+		CreatedAt:   time.Now(),
+		ExpiresAt:   time.Now().Add(7 * 24 * time.Hour),
+		IsActive:    true,
+		IPAddress:   ip,
+		UserAgent:   useragent,
+		RefreshHash: refreshHash,
+		GeoString:   fmt.Sprintf("%s, %s", country, city),
 	}
 
 	if err = s.repo.CreateSession(ctx.Context(), s.repo.DB, session); err != nil {
@@ -81,12 +83,13 @@ func (s *Service) RefreshToken(ctx fiber.Ctx, refreshToken string) (access strin
 
 	newRefresh, _ := GenerateRefreshToken()
 	newAccess, _ := token.GenerateAccessToken(session.UserID, 1, session.ID)
+	country, city := s.geo.GetGeoString(ip)
 
 	session.RefreshHash = generate.HashToken(newRefresh)
 	session.ExpiresAt = time.Now().Add(7 * 24 * time.Hour)
 	session.IPAddress = ip
 	session.UserAgent = useragent
-	session.LastActiveAt = time.Now()
+	session.GeoString = fmt.Sprintf("%s, %s", country, city)
 
 	if _, err := s.repo.UpdateSession(ctx, s.repo.DB, *session); err != nil {
 		return "", "", err

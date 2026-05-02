@@ -3,7 +3,6 @@ package roadmap
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"time"
 
 	"be-file-uploader/internal/models"
@@ -35,8 +34,6 @@ func (s *Service) AddTask(ctx fiber.Ctx, sender *models.User, title string) (tas
 		if err != nil {
 			return err
 		}
-
-		s.notify.CreateNotification(ctx.Context(), sender.ID, fmt.Sprintf("NOTIFY_ROADMAP_ADD_TASK+%s", task.Title))
 
 		return nil
 	})

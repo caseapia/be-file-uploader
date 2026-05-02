@@ -16,8 +16,8 @@ import (
 )
 
 type Database struct {
-	Web   *bun.DB
-	Redis *redis.Client
+	Web *bun.DB
+	// Redis *redis.Client
 }
 
 func connectRedis() (*redis.Client, error) {
@@ -88,14 +88,14 @@ func CreateDatabase() (*Database, error) {
 		return nil, err
 	}
 
-	rdb, err := connectRedis()
-	if err != nil {
-		return nil, err
-	}
+	// rdb, err := connectRedis()
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	return &Database{
-		Web:   web,
-		Redis: rdb,
+		Web: web,
+		// Redis: rdb,
 	}, nil
 }
 
@@ -106,9 +106,9 @@ func (d Database) Close() {
 		}
 	}
 
-	if d.Redis != nil {
-		if err := d.Redis.Close(); err != nil {
-			slog.Errorf("failed to close redis connection: %v", err)
-		}
-	}
+	// if d.Redis != nil {
+	// 	if err := d.Redis.Close(); err != nil {
+	// 		slog.Errorf("failed to close redis connection: %v", err)
+	// 	}
+	// }
 }
