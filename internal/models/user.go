@@ -73,6 +73,10 @@ func (u *User) GetPrivateData() map[string]interface{} {
 }
 
 func (u *User) GetGeolocationData() *Geolocation {
+	if u.Geolocation == nil {
+		return nil
+	}
+
 	return &Geolocation{
 		City:        u.Geolocation.City,
 		CountryCode: u.Geolocation.CountryCode,
