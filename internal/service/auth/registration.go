@@ -26,6 +26,7 @@ func (s *Service) createUserWithInvite(ctx fiber.Ctx, username, password string)
 	ip := ctx.IP()
 	useragent := ctx.Get("X-User-Agent")
 	rayid := ctx.Get("Cf-Ray")
+	code, country, city := s.geo.GetGeoString(ip)
 
 	hashPassword, err := generate.HashPassword(password)
 	unhashedPassword = password
@@ -46,6 +47,12 @@ func (s *Service) createUserWithInvite(ctx fiber.Ctx, username, password string)
 		UploadLimit: 1073741824,
 		UsedStorage: 0,
 		CFRayID:     rayid,
+		GeoString:   country + ", " + city,
+		Geolocation: models.Geolocation{
+			Code:    code,
+			City:    city,
+			Country: country,
+		},
 	}
 
 	err = s.repo.WithTx(ctx, func(tx bun.Tx) error {

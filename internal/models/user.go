@@ -32,7 +32,8 @@ type User struct {
 	Locale      string                 `bun:"locale" json:"-"`
 	ShareXToken *string                `bun:"sharex_token" json:"-"`
 	LastSeen    time.Time              `bun:"last_seen,default:current_timestamp" json:"last_seen"`
-	GeoString   string                 `bun:"geo_string" json:"geo"`
+	GeoString   string                 `bun:"geo_string" json:"-"`
+	Geolocation Geolocation            `bun:"-" json:"geolocation"`
 }
 
 type UserRole struct {
@@ -43,6 +44,12 @@ type UserRole struct {
 
 	RoleID int   `bun:"role_id,pk"`
 	Role   *Role `bun:"rel:belongs-to,join:role_id=id"`
+}
+
+type Geolocation struct {
+	Code    string
+	Country string
+	City    string
 }
 
 func (u *User) HasPermission(permission role.Permission) bool {

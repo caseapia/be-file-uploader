@@ -64,14 +64,26 @@ func Middleware(auth *auth.Service, geo *geo.Service, repo *mysql.Repository) fi
 		useragent := ctx.Get("X-User-Agent")
 		rayid := ctx.Get("Cf-Ray")
 		locale := ctx.Get("X-Locale")
-		country, city := geo.GetGeoString(ip)
+		code, country, city := geo.GetGeoString(ip)
 
 		user, claims, err := auth.ParseJWT(token)
 		if err != nil {
 			return err
 		}
 
-		_, err = repo.UpdateUser(ctx.Context(), repo.DB, &models.User{ID: user.ID, LastIP: ip, Useragent: useragent, CFRayID: rayid, Locale: locale, LastSeen: time.Now(), GeoString: fmt.Sprintf("%s, %s", country, city)}, "last_ip", "useragent", "cf_ray_id", "locale", "last_seen", "geo_string")
+		user.LastIP = ip
+		user.Useragent = useragent
+		user.CFRayID = rayid
+		user.Locale = locale
+		user.LastSeen = time.Now()
+		user.GeoString = fmt.Sprintf("%s, %s", country, city)
+		user.Geolocation = models.Geolocation{
+			Code:    code,
+			City:    city,
+			Country: country,
+		}
+
+		_, err = repo.UpdateUser(ctx.Context(), repo.DB, user, "last_ip", "useragent", "cf_ray_id", "locale", "last_seen", "geo_string")
 		if err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, "ERR_DATABASE_UPDATE")
 		}

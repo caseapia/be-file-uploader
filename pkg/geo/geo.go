@@ -26,20 +26,20 @@ func isLocalIP(ip string) bool {
 	return ip == "127.0.0.1" || ip == "::1"
 }
 
-func (s *Service) GetGeoString(ip string) (country string, city string) {
+func (s *Service) GetGeoString(ip string) (countryCode string, country string, city string) {
 	if isLocalIP(ip) {
-		return "Local", "Local"
+		return "LC", "Local", "Local"
 	}
 
 	res, err := s.db.Get_all(ip)
 	if err != nil {
 		slog.Errorf("Failed to get geolocation data: %v", err)
-		return "Unknown", "Unknown"
+		return "Unknown", "Unknown", "Unknown"
 	}
 
 	if res.Country_long == "" || res.Country_long == "This parameter is unavailable..." {
-		return "Unknown", "Unknown"
+		return "Unknown", "Unknown", "Unknown"
 	}
 
-	return res.Country_long, res.City
+	return res.Country_short, res.Country_long, res.City
 }
