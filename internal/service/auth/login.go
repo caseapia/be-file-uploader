@@ -31,7 +31,7 @@ func (s *Service) Login(ctx fiber.Ctx, username, password string) (user *models.
 		return nil, "", "", fiber.NewError(fiber.StatusInternalServerError, "ERR_TOKEN_GENERATION")
 	}
 
-	ip := ctx.IP()
+	ip := ctx.Get("CF-Connecting-IP")
 	useragent := ctx.Get("X-User-Agent")
 	code, country, city := s.geo.GetGeoString(ip)
 
