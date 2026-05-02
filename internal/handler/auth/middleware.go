@@ -77,7 +77,7 @@ func Middleware(auth *auth.Service, geo *geo.Service, repo *mysql.Repository) fi
 		user.Locale = locale
 		user.LastSeen = time.Now()
 		user.GeoString = fmt.Sprintf("%s, %s", country, city)
-		user.Geolocation = models.Geolocation{
+		user.Geolocation = &models.Geolocation{
 			CountryCode: code,
 			City:        city,
 			Country:     country,

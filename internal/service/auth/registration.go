@@ -48,7 +48,7 @@ func (s *Service) createUserWithInvite(ctx fiber.Ctx, username, password string)
 		UsedStorage: 0,
 		CFRayID:     rayid,
 		GeoString:   country + ", " + city,
-		Geolocation: models.Geolocation{
+		Geolocation: &models.Geolocation{
 			CountryCode: code,
 			City:        city,
 			Country:     country,
