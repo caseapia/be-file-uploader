@@ -34,7 +34,7 @@ import (
 	"github.com/bytedance/sonic"
 )
 
-func CreateApp() (app *fiber.App, db *database.Database, err error) {
+func CreateApp(geo *geo.Service) (app *fiber.App, db *database.Database, err error) {
 	setupLogger()
 
 	debug := flag.Bool("debug", false, "debug app with display of incoming requests")
@@ -117,18 +117,12 @@ func CreateApp() (app *fiber.App, db *database.Database, err error) {
 		AllowCredentials: true,
 	}))
 
-	geoService, err := geo.New("data/IP2LOCATION-LITE-DB11.IPV6.BIN")
-	if err != nil {
-		slog.Fatalf("geo init error: %s", err)
-	}
-	defer geoService.Close()
-
 	storage, err := r2.NewStorage(os.Getenv("R2_ACCESS_KEY"), os.Getenv("R2_SECRET_KEY"), os.Getenv("R2_BUCKET"), os.Getenv("R2_PUBLIC_URL"))
 
 	notifyService := notifySrv.NewService(webDB)
 	notifyHandler := notification.NewHandler(notifyService, webDB)
 
-	authService := authSrv.NewService(webDB, geoService)
+	authService := authSrv.NewService(webDB, geo)
 	authHandler := auth.NewHandler(authService)
 
 	userService := userSrv.NewService(webDB, notifyService)
@@ -150,7 +144,7 @@ func CreateApp() (app *fiber.App, db *database.Database, err error) {
 
 	api := app.Group("/v1/api")
 	public := api.Group("/public")
-	private := api.Group("/private").Use(auth.Middleware(authService, geoService, webDB))
+	private := api.Group("/private").Use(auth.Middleware(authService, geo, webDB))
 
 	authHandler.RegisterPublicRoutes(public)
 	authHandler.RegisterPrivateRoutes(private)

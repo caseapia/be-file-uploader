@@ -7,7 +7,9 @@ import (
 	"syscall"
 
 	"be-file-uploader/internal/app"
+	"be-file-uploader/pkg/geo"
 
+	"github.com/gookit/slog"
 	"github.com/joho/godotenv"
 )
 
@@ -16,7 +18,13 @@ func main() {
 		log.Fatalf("Error loading .env file: %s", err)
 	}
 
-	appInstance, db, err := app.CreateApp()
+	geoService, err := geo.New("data/IP2LOCATION-LITE-DB11.IPV6.BIN")
+	if err != nil {
+		slog.Fatalf("geo init error: %s", err)
+	}
+	defer geoService.Close()
+
+	appInstance, db, err := app.CreateApp(geoService)
 	if err != nil {
 		log.Fatalf("Error creating app instance: %s", err)
 	}

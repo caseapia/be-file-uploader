@@ -1,8 +1,6 @@
 package geo
 
 import (
-	"fmt"
-
 	"github.com/gookit/slog"
 	"github.com/ip2location/ip2location-go/v9"
 )
@@ -36,17 +34,12 @@ func (s *Service) GetGeoString(ip string) (country string, city string) {
 	res, err := s.db.Get_all(ip)
 	if err != nil {
 		slog.Errorf("Failed to get geolocation data: %v", err)
+		return "Unknown", "Unknown"
 	}
-	if s.db == nil {
-		panic("DB is nil")
+
+	if res.Country_long == "" || res.Country_long == "This parameter is unavailable..." {
+		return "Unknown", "Unknown"
 	}
-	fmt.Println("DB pointer:", s.db)
-
-	fmt.Println("Country:", res.Country_long)
-	fmt.Println("City:", res.City)
-	fmt.Println("Timezone:", res.Timezone)
-
-	slog.Info(res)
 
 	return res.Country_long, res.City
 }
