@@ -49,5 +49,7 @@ func (s *Service) GetGeoString(ip string) (countryCode string, country string, c
 		return "Unknown", "Unknown", "Unknown"
 	}
 
+	slog.Info(res)
+
 	return res.Country_short, res.Country_long, res.City
 }
