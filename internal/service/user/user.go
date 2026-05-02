@@ -32,6 +32,7 @@ func (s *Service) LookupAccount(ctx context.Context, sender *models.User, target
 	isSensetiveDataAccess := sender.HasPermission(role.ViewPrivateData)
 	if isSensetiveDataAccess {
 		account.Private = account.GetPrivateData()
+		account.Geolocation = account.GetGeolocationData()
 	}
 
 	return account, nil

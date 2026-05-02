@@ -47,9 +47,9 @@ func (s *Service) Login(ctx fiber.Ctx, username, password string) (user *models.
 		RefreshHash: refreshHash,
 		GeoString:   fmt.Sprintf("%s, %s", country, city),
 		Geolocation: models.Geolocation{
-			Code:    code,
-			City:    city,
-			Country: country,
+			CountryCode: code,
+			City:        city,
+			Country:     country,
 		},
 	}
 
@@ -96,9 +96,9 @@ func (s *Service) RefreshToken(ctx fiber.Ctx, refreshToken string) (access strin
 	session.UserAgent = useragent
 	session.GeoString = fmt.Sprintf("%s, %s", country, city)
 	session.Geolocation = models.Geolocation{
-		Code:    code,
-		City:    city,
-		Country: country,
+		CountryCode: code,
+		City:        city,
+		Country:     country,
 	}
 
 	if _, err := s.repo.UpdateSession(ctx, s.repo.DB, *session); err != nil {

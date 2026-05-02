@@ -78,9 +78,9 @@ func Middleware(auth *auth.Service, geo *geo.Service, repo *mysql.Repository) fi
 		user.LastSeen = time.Now()
 		user.GeoString = fmt.Sprintf("%s, %s", country, city)
 		user.Geolocation = models.Geolocation{
-			Code:    code,
-			City:    city,
-			Country: country,
+			CountryCode: code,
+			City:        city,
+			Country:     country,
 		}
 
 		_, err = repo.UpdateUser(ctx.Context(), repo.DB, user, "last_ip", "useragent", "cf_ray_id", "locale", "last_seen", "geo_string")

@@ -33,7 +33,7 @@ type User struct {
 	ShareXToken *string                `bun:"sharex_token" json:"-"`
 	LastSeen    time.Time              `bun:"last_seen,default:current_timestamp" json:"last_seen"`
 	GeoString   string                 `bun:"geo_string" json:"-"`
-	Geolocation Geolocation            `bun:"-" json:"geolocation"`
+	Geolocation *Geolocation           `bun:"-" json:"-"`
 }
 
 type UserRole struct {
@@ -47,9 +47,9 @@ type UserRole struct {
 }
 
 type Geolocation struct {
-	Code    string
-	Country string
-	City    string
+	CountryCode string `json:"country_code"`
+	Country     string `json:"country"`
+	City        string `json:"city"`
 }
 
 func (u *User) HasPermission(permission role.Permission) bool {
@@ -69,5 +69,13 @@ func (u *User) GetPrivateData() map[string]interface{} {
 		"cf_ray_id":    u.CFRayID,
 		"locale":       u.Locale,
 		"sharex_token": u.ShareXToken,
+	}
+}
+
+func (u *User) GetGeolocationData() *Geolocation {
+	return &Geolocation{
+		City:        u.Geolocation.City,
+		CountryCode: u.Geolocation.CountryCode,
+		Country:     u.Geolocation.Country,
 	}
 }
