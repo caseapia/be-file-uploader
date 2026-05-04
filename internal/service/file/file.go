@@ -302,6 +302,8 @@ func (s *Service) GrantAccess(ctx fiber.Ctx, sender *models.User, fileID, target
 			return err
 		}
 
+		s.notify.CreateNotification(ctx.Context(), user.ID, fmt.Sprintf("NOTIFY_GRANT_ACCESS+%s+%s", sender.Username, post.OriginalName))
+
 		return nil
 	})
 	if err != nil {
@@ -332,6 +334,8 @@ func (s *Service) RemoveAccess(ctx fiber.Ctx, sender *models.User, fileID, targe
 		if err != nil {
 			return err
 		}
+
+		s.notify.CreateNotification(ctx.Context(), user.ID, fmt.Sprintf("NOTIFY_REVOKE_ACCESS+%s+%s", sender.Username, post.OriginalName))
 
 		return nil
 	})
