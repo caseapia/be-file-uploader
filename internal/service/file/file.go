@@ -1,165 +1,21 @@
-package image
+package file
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"fmt"
-	"mime/multipart"
-	"os"
-	"path"
 	"slices"
-	"strconv"
-	"strings"
 	"time"
 
 	"be-file-uploader/internal/models"
 	"be-file-uploader/internal/models/relations"
 	"be-file-uploader/internal/models/requests"
 	"be-file-uploader/pkg/enums/role"
-	"be-file-uploader/pkg/utils/generate"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/gabriel-vasile/mimetype"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gookit/slog"
 	"github.com/uptrace/bun"
 )
-
-func (s *Service) validateUploadLimits(u *models.User, size int64) error {
-	if size > maxFileSize {
-		return fiber.NewError(fiber.StatusRequestEntityTooLarge, "ERR_IMAGE_TOO_LARGE")
-	}
-	if u.UsedStorage+size > u.UploadLimit {
-		return fiber.NewError(fiber.StatusRequestEntityTooLarge, "ERR_QUOTA_EXCEEDED")
-	}
-	return nil
-}
-
-func (s *Service) processImageFile(fh *multipart.FileHeader) ([]byte, string, string, error) {
-	file, err := fh.Open()
-	if err != nil {
-		return nil, "", "", fiber.NewError(fiber.StatusInternalServerError, "ERR_OPEN_IMAGE")
-	}
-	defer file.Close()
-
-	data, err := s.storage.ReadAll(file)
-	if err != nil {
-		return nil, "", "", fiber.NewError(fiber.StatusInternalServerError, "ERR_FILE_READING")
-	}
-
-	mtype := mimetype.Detect(data)
-	m := mtype.String()
-
-	ext, ok := allowedMime[mtype.String()]
-	if !ok {
-		return nil, "", "", fiber.NewError(fiber.StatusInternalServerError, "ERR_MIMETYPE")
-	}
-
-	return data, m, ext, nil
-}
-
-func (s *Service) generateStorageKey(userID int, imgID, ext string) string {
-	if os.Getenv("APP_MODE") == "DEV" {
-		return path.Join(
-			"images/dev",
-			strconv.FormatInt(int64(userID), 10),
-			time.Now().Format("2006-01"),
-			imgID+ext,
-		)
-	}
-
-	return path.Join(
-		"images",
-		strconv.FormatInt(int64(userID), 10),
-		time.Now().Format("2006-01"),
-		imgID+ext,
-	)
-}
-
-func (s *Service) InitMultipartUpload(ctx context.Context, uploader *models.User, req requests.InitUpload) (*requests.InitUploadResponse, error) {
-	if err := s.validateUploadLimits(uploader, req.Size); err != nil {
-		return nil, err
-	}
-
-	ext, ok := allowedMime[req.MimeType]
-	if !ok {
-		return nil, fiber.NewError(fiber.StatusInternalServerError, "ERR_MIMETYPE")
-	}
-
-	imageID, _ := generate.ImageID()
-	r2Key := s.generateStorageKey(uploader.ID, imageID, ext)
-
-	uploadID, err := s.storage.CreateMultipartUpload(ctx, r2Key, req.MimeType)
-	if err != nil {
-		return nil, err
-	}
-
-	return &requests.InitUploadResponse{
-		UploadID: uploadID,
-		Key:      r2Key,
-	}, nil
-}
-
-func (s *Service) UploadChunk(ctx context.Context, uploadID, key string, partNumber int32, fh *multipart.FileHeader) (string, error) {
-	file, err := fh.Open()
-	if err != nil {
-		return "", fiber.NewError(fiber.StatusInternalServerError, "ERR_OPEN_IMAGE")
-	}
-	defer file.Close()
-
-	data, err := s.storage.ReadAll(file)
-	if err != nil {
-		return "", fiber.NewError(fiber.StatusInternalServerError, "ERR_FILE_READING")
-	}
-
-	eTag, err := s.storage.UploadPart(ctx, key, uploadID, partNumber, data)
-	if err != nil {
-		return "", fiber.NewError(fiber.StatusInternalServerError, "ERR_UPLOAD_CHUNK")
-	}
-
-	return eTag, nil
-}
-
-func (s *Service) CompleteMultipartUpload(ctx context.Context, uploader *models.User, req *requests.CompleteUpload) (*models.File, error) {
-	var s3Parts []types.CompletedPart
-	for _, p := range req.Parts {
-		s3Parts = append(s3Parts, types.CompletedPart{
-			PartNumber: aws.Int32(p.PartNumber),
-			ETag:       aws.String(p.ETag),
-		})
-	}
-
-	publicURL, err := s.storage.CompleteMultipartUpload(ctx, req.Key, req.UploadID, s3Parts)
-	if err != nil {
-		return nil, fiber.NewError(fiber.StatusInternalServerError, "ERR_COMPLETE_MULTIPART")
-	}
-
-	file := models.File{
-		R2Key:        req.Key,
-		URL:          publicURL,
-		OriginalName: req.OriginalName,
-		MimeType:     req.MimeType,
-		Size:         req.Size,
-		UploadedBy:   uploader.ID,
-		IsPrivate:    req.IsPrivate,
-	}
-
-	err = s.repo.WithTx(ctx, func(tx bun.Tx) error {
-		if err := s.repo.ReserveDiskSpace(ctx, tx, uploader, req.Size); err != nil {
-			return err
-		}
-
-		return s.repo.CreateFile(ctx, tx, &file)
-	})
-	if err != nil {
-		_ = s.storage.Delete(ctx, req.Key)
-		return nil, fiber.NewError(fiber.StatusInternalServerError, err.Error())
-	}
-
-	return &file, nil
-}
 
 func (s *Service) DeleteFile(ctx fiber.Ctx, imageID int, requester *models.User) (uploadLimit *int64, err error) {
 	image, err := s.repo.SearchFileByID(ctx, imageID)
@@ -246,8 +102,6 @@ func (s *Service) lookupFileAndAlbum(
 		return nil, nil, fiber.NewError(fiber.StatusForbidden, "ERR_IMAGE_FORBIDDEN")
 	}
 
-	// _, err = s.repo.AddView(ctx, s.repo.DB, models.ImageViews{ImageID: image.ID, ViewerID: senderID})
-
 	return image, album, nil
 }
 
@@ -329,13 +183,11 @@ func (s *Service) FindFile(ctx fiber.Ctx, sender *models.User, imageID int) (*mo
 		return nil, err
 	}
 
-	if (image.IsPrivate && sender.ID != image.UploadedBy) && !sender.HasPermission(role.ManageFiles) {
-		return nil, fiber.NewError(fiber.StatusNotFound, "ERR_IMAGE_NOTFOUND")
+	if !image.CanAccess(sender) {
+		return nil, fiber.NewError(fiber.StatusNotFound, "ERR_FILE_NOTFOUND")
 	}
 
-	if strings.Contains(image.MimeType, "image") && (sender.ID != image.UploadedBy || !sender.HasPermission(role.ManageFiles)) {
-		image.URL = ""
-	}
+	image.ResolveURL(sender)
 
 	return image, nil
 }
@@ -415,4 +267,105 @@ func (s *Service) AddComment(ctx fiber.Ctx, sender *models.User, image int, cont
 	}
 
 	return comment, nil
+}
+
+func (s *Service) GrantAccess(ctx fiber.Ctx, sender *models.User, fileID, target int) (state bool, err error) {
+	post, err := s.FindFile(ctx, sender, fileID)
+	if err != nil {
+		return false, err
+	}
+	user, err := s.repo.LookupUserByID(ctx.Context(), target)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, fiber.NewError(fiber.StatusNotFound, "ERR_USER_NOTFOUND")
+		}
+		return false, err
+	}
+
+	if sender.ID != post.UploadedBy {
+		return false, fiber.NewError(fiber.StatusNotFound, "ERR_FORBIDDEN")
+	}
+	if post.IsPrivate == false {
+		return false, fiber.NewError(fiber.StatusConflict, "ERR_NOT_AVAILABLE")
+	}
+
+	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) (err error) {
+		grant := models.FileGrants{
+			UserID:      user.ID,
+			GrantedByID: sender.ID,
+			IsOwner:     false,
+			FileID:      post.ID,
+		}
+
+		err = s.repo.GrantAccess(ctx.Context(), tx, grant)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (s *Service) RemoveAccess(ctx fiber.Ctx, sender *models.User, fileID, target int) (state bool, err error) {
+	post, err := s.FindFile(ctx, sender, fileID)
+	if err != nil {
+		return false, err
+	}
+	user, err := s.repo.LookupUserByID(ctx.Context(), target)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, fiber.NewError(fiber.StatusNotFound, "ERR_USER_NOTFOUND")
+		}
+		return false, err
+	}
+	if post.UploadedBy != sender.ID {
+		return false, fiber.NewError(fiber.StatusNotFound, "ERR_FORBIDDEN")
+	}
+
+	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) (err error) {
+		err = s.repo.RemoveAccess(ctx.Context(), tx, user.ID, post.ID)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (s *Service) EditFileDetails(ctx fiber.Ctx, sender *models.User, req requests.EditFileDetails) (file *models.File, err error) {
+	post, err := s.FindFile(ctx, sender, req.FileID)
+	if err != nil {
+		return nil, err
+	}
+
+	if post.UploadedBy != sender.ID {
+		return nil, fiber.NewError(fiber.StatusNotFound, "ERR_FORBIDDEN")
+	}
+
+	post.OriginalName = req.FileName
+	post.IsPrivate = req.IsPrivate
+
+	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) (err error) {
+		_, err = s.repo.UpdateFile(ctx.Context(), tx, post)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return post, nil
 }

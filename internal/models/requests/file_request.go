@@ -44,3 +44,14 @@ type AddCommentToPost struct {
 	PostID  int    `json:"post_id" validate:"required,min=1"`
 	Content string `json:"content" validate:"required,min=1"`
 }
+
+type EditAccess struct {
+	FileID int `json:"file_id" validate:"required,min=1"`
+	UserID int `json:"user_id" validate:"required,min=1"`
+}
+
+type EditFileDetails struct {
+	FileID    int    `json:"file_id" validate:"required,min=1"`
+	FileName  string `json:"file_name" validate:"required"`
+	IsPrivate bool   `json:"is_private" validate:"boolean"`
+}

@@ -28,6 +28,7 @@ type File struct {
 	Likes        []FileLike     `bun:"rel:has-many,join:id=image_id" json:"likes"`
 	Downloads    int            `bun:"downloads,default:0" json:"downloads"`
 	CreatedAt    time.Time      `bun:"created_at,default:current_timestamp" json:"created_at"`
+	Grants       []FileGrants   `bun:"rel:has-many,join:id=file_id" json:"grants"`
 }
 
 type FileLike struct {
@@ -49,6 +50,18 @@ type FileComment struct {
 	CreatedAt time.Time      `bun:"created_at,default:current_timestamp" json:"created_at"`
 }
 
+type FileGrants struct {
+	bun.BaseModel `bun:"table:files_grants,alias:fg"`
+
+	ID          int            `bun:"id,pk,autoincrement" json:"id"`
+	FileID      int            `bun:"file_id" json:"-"`
+	UserID      int            `bun:"user_id" json:"-"`
+	User        relations.User `bun:"rel:belongs-to,join:user_id=id" json:"user"`
+	GrantedByID int            `bun:"granted_by" json:"-"`
+	GrantedBy   relations.User `bun:"rel:belongs-to,join:granted_by=id" json:"granted_by_user"`
+	IsOwner     bool           `bun:"is_owner,default:false" json:"is_owner"`
+}
+
 // type FileDownloads struct {
 // 	ImageID  int            `bun:"image_id,pk" json:"image_id"`
 // 	AuthorID int            `bun:"author" json:"-"`
@@ -61,8 +74,22 @@ func (f *File) ResolveURL(sender *User) {
 		return
 	}
 
-	if f.IsPrivate && f.UploadedBy != sender.ID && !sender.HasPermission(role.ManageFiles) {
+	if f.IsPrivate && !f.CanAccess(sender) {
 		f.URL = ""
-		return
 	}
+}
+
+func (f *File) CanAccess(user *User) bool {
+	if !f.IsPrivate {
+		return true
+	}
+	if user.HasPermission(role.ManageFiles) {
+		return true
+	}
+	for _, grant := range f.Grants {
+		if grant.UserID == user.ID {
+			return true
+		}
+	}
+	return false
 }

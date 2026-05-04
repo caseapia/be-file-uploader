@@ -1,14 +1,14 @@
 {
   "_type": "export",
   "__export_format": 4,
-  "__export_date": "2026-04-12T00:00:00.000Z",
-  "__export_source": "be-file-uploader.openapi-docs",
+  "__export_date": "2026-05-02T22:52:08.310Z",
+  "__export_source": "be-file-uploader.docs-sync",
   "resources": [
     {
       "_id": "wrk_bfup_001",
       "_type": "workspace",
       "name": "be-file-uploader",
-      "description": "REST API workspace for auth, user, invite, and storage flows. Import into Insomnia and select an environment before sending requests.",
+      "description": "REST API workspace aligned with current /v1/api routes.",
       "scope": "collection"
     },
     {
@@ -23,15 +23,29 @@
         "refresh_token": "",
         "username": "demo_user",
         "password": "secret12",
-        "invite_code": "ABC12D",
-        "invite_id": 1,
-        "current_user_id": 1,
         "lookup_user_id": 1,
+        "target_user_id": 1,
+        "upload_limit": 1073741824,
+        "role_id": 1,
         "image_id": 1,
-        "image_url": "",
-        "image_owner_id": 1,
-        "image_file_path": "",
-        "notes": "Set image_file_path to a local image path before calling upload."
+        "image_name": "example.png",
+        "image_mime_type": "image/png",
+        "image_size": 1024,
+        "is_private": false,
+        "upload_id": "",
+        "upload_key": "",
+        "upload_part_number": 1,
+        "upload_part_etag": "",
+        "chunk_file_path": "",
+        "sharex_file_path": "",
+        "sharex_token": "",
+        "album_id": 1,
+        "album_name": "Screenshots",
+        "comment": "Looks good",
+        "notification_id": 1,
+        "roadmap_task_id": 1,
+        "roadmap_title": "Add public profiles",
+        "roadmap_status": 0
       },
       "dataPropertyOrder": {
         "&": [
@@ -41,15 +55,29 @@
           "refresh_token",
           "username",
           "password",
-          "invite_code",
-          "invite_id",
-          "current_user_id",
           "lookup_user_id",
+          "target_user_id",
+          "upload_limit",
+          "role_id",
           "image_id",
-          "image_url",
-          "image_owner_id",
-          "image_file_path",
-          "notes"
+          "image_name",
+          "image_mime_type",
+          "image_size",
+          "is_private",
+          "upload_id",
+          "upload_key",
+          "upload_part_number",
+          "upload_part_etag",
+          "chunk_file_path",
+          "sharex_file_path",
+          "sharex_token",
+          "album_id",
+          "album_name",
+          "comment",
+          "notification_id",
+          "roadmap_task_id",
+          "roadmap_title",
+          "roadmap_status"
         ]
       },
       "color": "#5b8def",
@@ -81,15 +109,13 @@
       "data": {
         "base_url": "https://staging.example.com",
         "username": "",
-        "password": "",
-        "invite_code": ""
+        "password": ""
       },
       "dataPropertyOrder": {
         "&": [
           "base_url",
           "username",
-          "password",
-          "invite_code"
+          "password"
         ]
       },
       "color": "#ff9800",
@@ -104,15 +130,13 @@
       "data": {
         "base_url": "https://api.example.com",
         "username": "",
-        "password": "",
-        "invite_code": ""
+        "password": ""
       },
       "dataPropertyOrder": {
         "&": [
           "base_url",
           "username",
-          "password",
-          "invite_code"
+          "password"
         ]
       },
       "color": "#f44336",
@@ -120,61 +144,115 @@
       "metaSortKey": 3
     },
     {
-      "_id": "fld_auth",
+      "_id": "fld_public_auth",
       "_type": "request_group",
       "parentId": "wrk_bfup_001",
       "name": "Public Auth",
-      "description": "Register, login, and refresh flows. Successful responses automatically persist access and refresh tokens into the active environment.",
+      "description": "Register, login, refresh.",
+      "environment": {},
+      "metaSortKey": -10000
+    },
+    {
+      "_id": "fld_public_utility",
+      "_type": "request_group",
+      "parentId": "wrk_bfup_001",
+      "name": "Public Utility",
+      "description": "Ping, roadmap list, ShareX upload.",
+      "environment": {},
+      "metaSortKey": -9000
+    },
+    {
+      "_id": "fld_private_auth",
+      "_type": "request_group",
+      "parentId": "wrk_bfup_001",
+      "name": "Private Auth",
+      "description": "Authenticated logout flow.",
+      "environment": {},
+      "metaSortKey": -8000
+    },
+    {
+      "_id": "fld_private_user",
+      "_type": "request_group",
+      "parentId": "wrk_bfup_001",
+      "name": "Private User",
+      "description": "Profile and ShareX token generation.",
+      "environment": {},
+      "metaSortKey": -7000
+    },
+    {
+      "_id": "fld_private_user_admin",
+      "_type": "request_group",
+      "parentId": "wrk_bfup_001",
+      "name": "Private User Admin",
+      "description": "Requires MANAGE_USERS.",
+      "environment": {},
+      "metaSortKey": -6000
+    },
+    {
+      "_id": "fld_private_storage_upload",
+      "_type": "request_group",
+      "parentId": "wrk_bfup_001",
+      "name": "Private Storage Upload",
+      "description": "Multipart init/chunk/complete.",
       "environment": {},
       "metaSortKey": -5000
     },
     {
-      "_id": "fld_user",
+      "_id": "fld_private_storage",
       "_type": "request_group",
       "parentId": "wrk_bfup_001",
-      "name": "Private User",
-      "description": "Authenticated user routes. Uses Bearer token from the active environment.",
+      "name": "Private Storage",
+      "description": "Storage list, post actions, and delete.",
       "environment": {},
       "metaSortKey": -4000
     },
     {
-      "_id": "fld_invite",
+      "_id": "fld_private_album",
       "_type": "request_group",
       "parentId": "wrk_bfup_001",
-      "name": "Private Invite Admin",
-      "description": "Requires MANAGE_USERS permission. Invite IDs and generated invite codes are automatically saved back into the environment.",
+      "name": "Private Album",
+      "description": "Album create/delete/lookup.",
       "environment": {},
       "metaSortKey": -3000
     },
     {
-      "_id": "fld_storage",
+      "_id": "fld_private_roles",
       "_type": "request_group",
       "parentId": "wrk_bfup_001",
-      "name": "Private Storage",
-      "description": "Authenticated storage routes. Upload saves image metadata to the environment for follow-up list/delete calls.",
+      "name": "Private Roles Admin",
+      "description": "Requires MANAGE_ROLES.",
       "environment": {},
       "metaSortKey": -2000
     },
     {
-      "_id": "fld_image_admin",
+      "_id": "fld_private_notifications",
       "_type": "request_group",
       "parentId": "wrk_bfup_001",
-      "name": "Private Image Admin",
-      "description": "Requires VIEW_OTHER_FILES permission.",
+      "name": "Private Notifications",
+      "description": "Notification list/read.",
       "environment": {},
       "metaSortKey": -1000
     },
     {
+      "_id": "fld_private_roadmap",
+      "_type": "request_group",
+      "parentId": "wrk_bfup_001",
+      "name": "Private Roadmap Admin",
+      "description": "Requires DEVELOPER.",
+      "environment": {},
+      "metaSortKey": 0
+    },
+    {
       "_id": "req_register",
       "_type": "request",
-      "parentId": "fld_auth",
+      "parentId": "fld_public_auth",
       "name": "Register",
       "method": "POST",
       "url": "{{ _.base_url }}/v1/api/public/auth/register",
-      "description": "Registers a new user by invite code and returns user plus access/refresh tokens.",
+      "description": "Create user and get access/refresh tokens.",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"username\": \"{{ _.username }}\",\n  \"password\": \"{{ _.password }}\",\n  \"invite_code\": \"{{ _.invite_code }}\"\n}"
+        "text": "{\n  \"username\": \"{{ _.username }}\",\n  \"password\": \"{{ _.password }}\"\n}"
       },
       "headers": [
         {
@@ -193,16 +271,16 @@
       "settingSendCookies": true,
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
-      "afterResponseScript": "const body = await insomnia.response.json();\nconst data = body && body.response;\nif (data?.access_token) await insomnia.environment.set('access_token', data.access_token);\nif (data?.refresh_token) await insomnia.environment.set('refresh_token', data.refresh_token);\nif (data?.user?.id) {\n  await insomnia.environment.set('current_user_id', data.user.id);\n  await insomnia.environment.set('lookup_user_id', data.user.id);\n}\nif (data?.user?.username) await insomnia.environment.set('username', data.user.username);\nconsole.log('[auth] register response processed');\n"
+      "afterResponseScript": "const body = await insomnia.response.json(); const data = body && body.response; if (data?.access_token) await insomnia.environment.set('access_token', data.access_token); if (data?.refresh_token) await insomnia.environment.set('refresh_token', data.refresh_token); if (data?.user?.id) { await insomnia.environment.set('lookup_user_id', data.user.id); await insomnia.environment.set('target_user_id', data.user.id); }"
     },
     {
       "_id": "req_login",
       "_type": "request",
-      "parentId": "fld_auth",
+      "parentId": "fld_public_auth",
       "name": "Login",
       "method": "POST",
       "url": "{{ _.base_url }}/v1/api/public/auth/login",
-      "description": "Authenticates a user and stores returned tokens in the active environment.",
+      "description": "Authenticate and get access/refresh tokens.",
       "body": {
         "mimeType": "application/json",
         "text": "{\n  \"username\": \"{{ _.username }}\",\n  \"password\": \"{{ _.password }}\"\n}"
@@ -224,16 +302,16 @@
       "settingSendCookies": true,
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
-      "afterResponseScript": "const body = await insomnia.response.json();\nconst data = body && body.response;\nif (data?.access_token) await insomnia.environment.set('access_token', data.access_token);\nif (data?.refresh_token) await insomnia.environment.set('refresh_token', data.refresh_token);\nif (data?.user?.id) {\n  await insomnia.environment.set('current_user_id', data.user.id);\n  await insomnia.environment.set('lookup_user_id', data.user.id);\n}\nconsole.log('[auth] login response processed');\n"
+      "afterResponseScript": "const body = await insomnia.response.json(); const data = body && body.response; if (data?.access_token) await insomnia.environment.set('access_token', data.access_token); if (data?.refresh_token) await insomnia.environment.set('refresh_token', data.refresh_token); if (data?.user?.id) { await insomnia.environment.set('lookup_user_id', data.user.id); await insomnia.environment.set('target_user_id', data.user.id); }"
     },
     {
       "_id": "req_refresh",
       "_type": "request",
-      "parentId": "fld_auth",
+      "parentId": "fld_public_auth",
       "name": "Refresh Tokens",
       "method": "POST",
       "url": "{{ _.base_url }}/v1/api/public/auth/refresh",
-      "description": "Rotates the refresh token and persists the new token pair.",
+      "description": "Rotate refresh token and issue new access token.",
       "body": {
         "mimeType": "application/json",
         "text": "{\n  \"refresh_token\": \"{{ _.refresh_token }}\"\n}"
@@ -255,22 +333,41 @@
       "settingSendCookies": true,
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
-      "afterResponseScript": "const body = await insomnia.response.json();\nconst data = body && body.response;\nif (data?.access_token) await insomnia.environment.set('access_token', data.access_token);\nif (data?.refresh_token) await insomnia.environment.set('refresh_token', data.refresh_token);\nconsole.log('[auth] refresh response processed');\n"
+      "afterResponseScript": "const body = await insomnia.response.json(); const data = body && body.response; if (data?.access_token) await insomnia.environment.set('access_token', data.access_token); if (data?.refresh_token) await insomnia.environment.set('refresh_token', data.refresh_token);"
     },
     {
-      "_id": "req_me",
+      "_id": "req_ping",
       "_type": "request",
-      "parentId": "fld_user",
-      "name": "Get My Profile",
+      "parentId": "fld_public_utility",
+      "name": "Ping",
       "method": "GET",
-      "url": "{{ _.base_url }}/v1/api/private/user/me",
-      "description": "Returns the authenticated user and updates helper IDs in the environment.",
+      "url": "{{ _.base_url }}/v1/api/public/ping",
+      "description": "Simple health endpoint.",
       "body": {},
       "headers": [
         {
-          "name": "Authorization",
-          "value": "Bearer {{ _.access_token }}"
-        },
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -3000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true
+    },
+    {
+      "_id": "req_roadmap_list_public",
+      "_type": "request",
+      "parentId": "fld_public_utility",
+      "name": "Roadmap List",
+      "method": "GET",
+      "url": "{{ _.base_url }}/v1/api/public/roadmap/list",
+      "description": "Public roadmap list.",
+      "body": {},
+      "headers": [
         {
           "name": "X-User-Agent",
           "value": "{{ _.x_user_agent }}"
@@ -282,17 +379,54 @@
       "settingStoreCookies": true,
       "settingSendCookies": true,
       "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "afterResponseScript": "const body = await insomnia.response.json();\nconst data = body && body.response;\nif (data?.id) {\n  await insomnia.environment.set('current_user_id', data.id);\n  await insomnia.environment.set('lookup_user_id', data.id);\n}\nconsole.log('[user] profile response processed');\n"
+      "settingRebuildPath": true
     },
     {
-      "_id": "req_lookup_user",
+      "_id": "req_sharex_upload",
       "_type": "request",
-      "parentId": "fld_user",
-      "name": "Lookup User By ID",
-      "method": "GET",
-      "url": "{{ _.base_url }}/v1/api/private/user/lookup/{{ _.lookup_user_id }}",
-      "description": "Attempts user lookup by numeric ID. Current backend implementation is stricter than intended; check docs if this returns 403.",
+      "parentId": "fld_public_utility",
+      "name": "ShareX Upload",
+      "method": "POST",
+      "url": "{{ _.base_url }}/v1/api/public/storage/upload/sharex",
+      "description": "Upload via ShareX token and image multipart.",
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          {
+            "id": "pair_sharex_token",
+            "name": "token",
+            "value": "{{ _.sharex_token }}"
+          },
+          {
+            "id": "pair_sharex_file",
+            "name": "image",
+            "type": "file",
+            "fileName": "{{ _.sharex_file_path }}"
+          }
+        ]
+      },
+      "headers": [
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true
+    },
+    {
+      "_id": "req_logout",
+      "_type": "request",
+      "parentId": "fld_private_auth",
+      "name": "Logout",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/v1/api/private/auth/logout",
+      "description": "Invalidate current session.",
       "body": {},
       "headers": [
         {
@@ -313,13 +447,13 @@
       "settingRebuildPath": true
     },
     {
-      "_id": "req_invite_list",
+      "_id": "req_user_me",
       "_type": "request",
-      "parentId": "fld_invite",
-      "name": "List Invites",
+      "parentId": "fld_private_user",
+      "name": "Get My Profile",
       "method": "GET",
-      "url": "{{ _.base_url }}/v1/api/private/invite/admin/list",
-      "description": "Lists all invites. Saves the first active invite ID and code for quick follow-up testing.",
+      "url": "{{ _.base_url }}/v1/api/private/user/me",
+      "description": "Get authenticated user profile.",
       "body": {},
       "headers": [
         {
@@ -338,16 +472,16 @@
       "settingSendCookies": true,
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
-      "afterResponseScript": "const body = await insomnia.response.json();\nconst list = body && body.response;\nif (Array.isArray(list)) {\n  const active = list.find(item => item && item.is_active);\n  if (active?.id) await insomnia.environment.set('invite_id', active.id);\n  if (active?.code) await insomnia.environment.set('invite_code', active.code);\n}\nconsole.log('[invite] list response processed');\n"
+      "afterResponseScript": "const body = await insomnia.response.json(); const data = body && body.response; if (data?.id) { await insomnia.environment.set('lookup_user_id', data.id); await insomnia.environment.set('target_user_id', data.id); }"
     },
     {
-      "_id": "req_invite_create",
+      "_id": "req_user_lookup",
       "_type": "request",
-      "parentId": "fld_invite",
-      "name": "Create Invite",
-      "method": "POST",
-      "url": "{{ _.base_url }}/v1/api/private/invite/admin/create",
-      "description": "Creates a new invite code and persists it into invite_code.",
+      "parentId": "fld_private_user",
+      "name": "Lookup User",
+      "method": "GET",
+      "url": "{{ _.base_url }}/v1/api/private/user/lookup/{{ _.lookup_user_id }}",
+      "description": "Lookup user by ID.",
       "body": {},
       "headers": [
         {
@@ -365,20 +499,318 @@
       "settingStoreCookies": true,
       "settingSendCookies": true,
       "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "afterResponseScript": "const body = await insomnia.response.json();\nconst code = body && body.response;\nif (typeof code === 'string' && code.length === 6) {\n  await insomnia.environment.set('invite_code', code);\n}\nconsole.log('[invite] create response processed');\n"
+      "settingRebuildPath": true
     },
     {
-      "_id": "req_invite_revoke",
+      "_id": "req_user_sharex_generate",
       "_type": "request",
-      "parentId": "fld_invite",
-      "name": "Revoke Invite",
-      "method": "DELETE",
-      "url": "{{ _.base_url }}/v1/api/private/invite/admin/revoke",
-      "description": "Revokes an invite by ID from the active environment.",
+      "parentId": "fld_private_user",
+      "name": "Generate ShareX Token",
+      "method": "GET",
+      "url": "{{ _.base_url }}/v1/api/private/user/shareX/generate",
+      "description": "Generate ShareX token for current user.",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "afterResponseScript": "const body = await insomnia.response.json(); const data = body && body.response; if (typeof data === 'string') await insomnia.environment.set('sharex_token', data);"
+    },
+    {
+      "_id": "req_admin_users",
+      "_type": "request",
+      "parentId": "fld_private_user_admin",
+      "name": "List Users",
+      "method": "GET",
+      "url": "{{ _.base_url }}/v1/api/private/user/admin/users",
+      "description": "List users (up to 30).",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -6000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true
+    },
+    {
+      "_id": "req_admin_role_add",
+      "_type": "request",
+      "parentId": "fld_private_user_admin",
+      "name": "Add User Role",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/v1/api/private/user/admin/role/add",
+      "description": "Attach role to user.",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"invite_id\": {{ _.invite_id }}\n}"
+        "text": "{\n  \"user\": {{ _.target_user_id }},\n  \"role\": {{ _.role_id }}\n}"
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -5000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true
+    },
+    {
+      "_id": "req_admin_role_remove",
+      "_type": "request",
+      "parentId": "fld_private_user_admin",
+      "name": "Remove User Role",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/v1/api/private/user/admin/role/delete",
+      "description": "Detach role from user.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"user\": {{ _.target_user_id }},\n  \"role\": {{ _.role_id }}\n}"
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -4000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true
+    },
+    {
+      "_id": "req_admin_storage_limit",
+      "_type": "request",
+      "parentId": "fld_private_user_admin",
+      "name": "Set Upload Limit",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/v1/api/private/user/admin/storage-limit/update",
+      "description": "Set user upload limit bytes.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"user\": {{ _.target_user_id }},\n  \"limit\": {{ _.upload_limit }}\n}"
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -3000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true
+    },
+    {
+      "_id": "req_admin_verify",
+      "_type": "request",
+      "parentId": "fld_private_user_admin",
+      "name": "Toggle Verify",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/v1/api/private/user/admin/verify/{{ _.target_user_id }}",
+      "description": "Toggle user verification flag.",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -2000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true
+    },
+    {
+      "_id": "req_admin_sharex_reset",
+      "_type": "request",
+      "parentId": "fld_private_user_admin",
+      "name": "Reset ShareX Token",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/v1/api/private/user/admin/shareX/reset/{{ _.target_user_id }}",
+      "description": "Reset target user ShareX token.",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true
+    },
+    {
+      "_id": "req_upload_init",
+      "_type": "request",
+      "parentId": "fld_private_storage_upload",
+      "name": "Init Upload",
+      "method": "POST",
+      "url": "{{ _.base_url }}/v1/api/private/storage/upload/init",
+      "description": "Start multipart upload.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"original_name\": \"{{ _.image_name }}\",\n  \"mime_type\": \"{{ _.image_mime_type }}\",\n  \"size\": {{ _.image_size }},\n  \"is_private\": {{ _.is_private }}\n}"
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -3000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "afterResponseScript": "const body = await insomnia.response.json(); const data = body && body.response; if (data?.upload_id) await insomnia.environment.set('upload_id', data.upload_id); if (data?.key) await insomnia.environment.set('upload_key', data.key);"
+    },
+    {
+      "_id": "req_upload_chunk",
+      "_type": "request",
+      "parentId": "fld_private_storage_upload",
+      "name": "Upload Chunk",
+      "method": "POST",
+      "url": "{{ _.base_url }}/v1/api/private/storage/upload/chunk",
+      "description": "Upload one multipart chunk.",
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          {
+            "id": "pair_chunk_upload_id",
+            "name": "upload_id",
+            "value": "{{ _.upload_id }}"
+          },
+          {
+            "id": "pair_chunk_key",
+            "name": "key",
+            "value": "{{ _.upload_key }}"
+          },
+          {
+            "id": "pair_chunk_part",
+            "name": "part_number",
+            "value": "{{ _.upload_part_number }}"
+          },
+          {
+            "id": "pair_chunk_file",
+            "name": "chunk",
+            "type": "file",
+            "fileName": "{{ _.chunk_file_path }}"
+          }
+        ]
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -2000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "afterResponseScript": "const body = await insomnia.response.json(); const data = body && body.response; if (data?.eTag) await insomnia.environment.set('upload_part_etag', data.eTag);"
+    },
+    {
+      "_id": "req_upload_complete",
+      "_type": "request",
+      "parentId": "fld_private_storage_upload",
+      "name": "Complete Upload",
+      "method": "POST",
+      "url": "{{ _.base_url }}/v1/api/private/storage/upload/complete",
+      "description": "Complete multipart upload and create file row.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"upload_id\": \"{{ _.upload_id }}\",\n  \"key\": \"{{ _.upload_key }}\",\n  \"original_name\": \"{{ _.image_name }}\",\n  \"mime_type\": \"{{ _.image_mime_type }}\",\n  \"size\": {{ _.image_size }},\n  \"is_private\": {{ _.is_private }},\n  \"parts\": [\n    {\n      \"part_number\": {{ _.upload_part_number }},\n      \"etag\": \"{{ _.upload_part_etag }}\"\n    }\n  ]\n}"
       },
       "headers": [
         {
@@ -400,54 +832,17 @@
       "settingStoreCookies": true,
       "settingSendCookies": true,
       "settingEncodeUrl": true,
-      "settingRebuildPath": true
-    },
-    {
-      "_id": "req_upload_image",
-      "_type": "request",
-      "parentId": "fld_storage",
-      "name": "Upload Image",
-      "method": "POST",
-      "url": "{{ _.base_url }}/v1/api/private/storage/upload",
-      "description": "Uploads one image from image_file_path. Accepted MIME types: jpeg, png, webp, gif. Max size: 10 MiB.",
-      "body": {
-        "mimeType": "multipart/form-data",
-        "params": [
-          {
-            "id": "pair_upload_image",
-            "name": "image",
-            "type": "file",
-            "fileName": "{{ _.image_file_path }}"
-          }
-        ]
-      },
-      "headers": [
-        {
-          "name": "Authorization",
-          "value": "Bearer {{ _.access_token }}"
-        },
-        {
-          "name": "X-User-Agent",
-          "value": "{{ _.x_user_agent }}"
-        }
-      ],
-      "authentication": {},
-      "metaSortKey": -3000,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingEncodeUrl": true,
       "settingRebuildPath": true,
-      "afterResponseScript": "const body = await insomnia.response.json();\nconst data = body && body.response;\nif (data?.id) await insomnia.environment.set('image_id', data.id);\nif (data?.url) await insomnia.environment.set('image_url', data.url);\nif (data?.uploader?.id) await insomnia.environment.set('image_owner_id', data.uploader.id);\nconsole.log('[storage] upload response processed');\n"
+      "afterResponseScript": "const body = await insomnia.response.json(); const data = body && body.response; if (data?.id) await insomnia.environment.set('image_id', data.id);"
     },
     {
-      "_id": "req_delete_image",
+      "_id": "req_storage_delete",
       "_type": "request",
-      "parentId": "fld_storage",
-      "name": "Delete Image",
+      "parentId": "fld_private_storage",
+      "name": "Delete File",
       "method": "POST",
-      "url": "{{ _.base_url }}/v1/api/private/storage/delete",
-      "description": "Deletes the image referenced by image_id. Current backend implementation is stricter than a typical owner-delete flow; see docs if this returns 403.",
+      "url": "{{ _.base_url }}/v1/api/private/storage/action/delete",
+      "description": "Delete file by ID.",
       "body": {
         "mimeType": "application/json",
         "text": "{\n  \"image_id\": {{ _.image_id }}\n}"
@@ -467,6 +862,264 @@
         }
       ],
       "authentication": {},
+      "metaSortKey": -11000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true
+    },
+    {
+      "_id": "req_storage_my",
+      "_type": "request",
+      "parentId": "fld_private_storage",
+      "name": "List My Files",
+      "method": "GET",
+      "url": "{{ _.base_url }}/v1/api/private/storage/my",
+      "description": "List authenticated user files.",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -10000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "afterResponseScript": "const body = await insomnia.response.json(); const list = body && body.response; if (Array.isArray(list) && list.length > 0 && list[0]?.id) await insomnia.environment.set('image_id', list[0].id);"
+    },
+    {
+      "_id": "req_storage_all",
+      "_type": "request",
+      "parentId": "fld_private_storage",
+      "name": "List All Files",
+      "method": "GET",
+      "url": "{{ _.base_url }}/v1/api/private/storage/list",
+      "description": "List files visible to requester.",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -9000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true
+    },
+    {
+      "_id": "req_storage_by_user",
+      "_type": "request",
+      "parentId": "fld_private_storage",
+      "name": "List Files By User",
+      "method": "GET",
+      "url": "{{ _.base_url }}/v1/api/private/storage/list/{{ _.target_user_id }}",
+      "description": "List public files by user ID.",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -8000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true
+    },
+    {
+      "_id": "req_storage_post",
+      "_type": "request",
+      "parentId": "fld_private_storage",
+      "name": "Lookup Post By ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/v1/api/private/storage/post/{{ _.image_id }}",
+      "description": "Lookup one file/post by ID.",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -7000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true
+    },
+    {
+      "_id": "req_storage_album_put",
+      "_type": "request",
+      "parentId": "fld_private_storage",
+      "name": "Add File To Album",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/v1/api/private/storage/action/album/put",
+      "description": "Attach file to album.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"image_id\": {{ _.image_id }},\n  \"album_id\": {{ _.album_id }}\n}"
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -6000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true
+    },
+    {
+      "_id": "req_storage_album_remove",
+      "_type": "request",
+      "parentId": "fld_private_storage",
+      "name": "Remove File From Album",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/v1/api/private/storage/action/album/delete",
+      "description": "Remove file from album.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"image_id\": {{ _.image_id }}\n}"
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -5000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true
+    },
+    {
+      "_id": "req_storage_like",
+      "_type": "request",
+      "parentId": "fld_private_storage",
+      "name": "Like Post",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/v1/api/private/storage/action/like/{{ _.image_id }}",
+      "description": "Like post by ID.",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -4000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true
+    },
+    {
+      "_id": "req_storage_unlike",
+      "_type": "request",
+      "parentId": "fld_private_storage",
+      "name": "Remove Like",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/v1/api/private/storage/action/likeRemove/{{ _.image_id }}",
+      "description": "Remove like from post by ID.",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -3000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true
+    },
+    {
+      "_id": "req_storage_download",
+      "_type": "request",
+      "parentId": "fld_private_storage",
+      "name": "Download Link",
+      "method": "GET",
+      "url": "{{ _.base_url }}/v1/api/private/storage/action/download/{{ _.image_id }}",
+      "description": "Increment download counter and return URL.",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
       "metaSortKey": -2000,
       "isPrivate": false,
       "settingStoreCookies": true,
@@ -475,13 +1128,136 @@
       "settingRebuildPath": true
     },
     {
-      "_id": "req_my_images",
+      "_id": "req_storage_comment",
       "_type": "request",
-      "parentId": "fld_storage",
-      "name": "List My Images",
+      "parentId": "fld_private_storage",
+      "name": "Add Comment",
+      "method": "POST",
+      "url": "{{ _.base_url }}/v1/api/private/storage/action/addComment",
+      "description": "Add comment to a post.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"post_id\": {{ _.image_id }},\n  \"content\": \"{{ _.comment }}\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true
+    },
+    {
+      "_id": "req_album_create",
+      "_type": "request",
+      "parentId": "fld_private_album",
+      "name": "Create Album",
+      "method": "POST",
+      "url": "{{ _.base_url }}/v1/api/private/album/action/create",
+      "description": "Create album.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"album_name\": \"{{ _.album_name }}\",\n  \"is_private\": {{ _.is_private }}\n}"
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -4000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "afterResponseScript": "const body = await insomnia.response.json(); const data = body && body.response; if (data?.id) await insomnia.environment.set('album_id', data.id);"
+    },
+    {
+      "_id": "req_album_delete",
+      "_type": "request",
+      "parentId": "fld_private_album",
+      "name": "Delete Album",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/v1/api/private/album/action/delete/{{ _.album_id }}",
+      "description": "Delete album by ID.",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -3000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true
+    },
+    {
+      "_id": "req_album_lookup",
+      "_type": "request",
+      "parentId": "fld_private_album",
+      "name": "Lookup Album",
       "method": "GET",
-      "url": "{{ _.base_url }}/v1/api/private/storage/my",
-      "description": "Lists the authenticated user's images. Requires VIEW_OWN_FILES.",
+      "url": "{{ _.base_url }}/v1/api/private/album/lookup/{{ _.album_id }}",
+      "description": "Lookup album by ID.",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -2000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true
+    },
+    {
+      "_id": "req_album_all",
+      "_type": "request",
+      "parentId": "fld_private_album",
+      "name": "Lookup All Albums",
+      "method": "GET",
+      "url": "{{ _.base_url }}/v1/api/private/album/lookupAll",
+      "description": "List all albums (MANAGE_FILES).",
       "body": {},
       "headers": [
         {
@@ -499,17 +1275,146 @@
       "settingStoreCookies": true,
       "settingSendCookies": true,
       "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "afterResponseScript": "const body = await insomnia.response.json();\nconst data = body && body.response;\nif (Array.isArray(data) && data.length > 0) {\n  const first = data[0];\n  if (first?.id) await insomnia.environment.set('image_id', first.id);\n  if (first?.url) await insomnia.environment.set('image_url', first.url);\n  if (first?.uploader?.id) await insomnia.environment.set('image_owner_id', first.uploader.id);\n}\nconsole.log('[storage] my images response processed');\n"
+      "settingRebuildPath": true
     },
     {
-      "_id": "req_admin_all_images",
+      "_id": "req_roles_all",
       "_type": "request",
-      "parentId": "fld_image_admin",
-      "name": "List All Images",
+      "parentId": "fld_private_roles",
+      "name": "List Roles",
       "method": "GET",
-      "url": "{{ _.base_url }}/v1/api/private/image/admin/list",
-      "description": "Lists all images. Requires VIEW_OTHER_FILES.",
+      "url": "{{ _.base_url }}/v1/api/private/roles/admin/all",
+      "description": "List all roles.",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -4000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true
+    },
+    {
+      "_id": "req_roles_create",
+      "_type": "request",
+      "parentId": "fld_private_roles",
+      "name": "Create Role",
+      "method": "POST",
+      "url": "{{ _.base_url }}/v1/api/private/roles/admin/create",
+      "description": "Create role.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"moderator\",\n  \"color\": \"#3366ff\",\n  \"is_system\": false,\n  \"permissions\": [\"VIEW_OTHER_FILES\", \"MANAGE_FILES\"]\n}"
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -3000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "afterResponseScript": "const body = await insomnia.response.json(); const data = body && body.response; if (data?.id) await insomnia.environment.set('role_id', data.id);"
+    },
+    {
+      "_id": "req_roles_edit",
+      "_type": "request",
+      "parentId": "fld_private_roles",
+      "name": "Edit Role",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/v1/api/private/roles/admin/edit",
+      "description": "Edit role by role_id.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"role_id\": {{ _.role_id }},\n  \"name\": \"moderator\",\n  \"color\": \"#3366ff\",\n  \"is_system\": false,\n  \"permissions\": [\"VIEW_OTHER_FILES\", \"MANAGE_FILES\"]\n}"
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -2000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true
+    },
+    {
+      "_id": "req_roles_delete",
+      "_type": "request",
+      "parentId": "fld_private_roles",
+      "name": "Delete Role",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/v1/api/private/roles/admin/delete",
+      "description": "Delete role by ID.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"id\": {{ _.role_id }}\n}"
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true
+    },
+    {
+      "_id": "req_notifications_my",
+      "_type": "request",
+      "parentId": "fld_private_notifications",
+      "name": "My Notifications",
+      "method": "GET",
+      "url": "{{ _.base_url }}/v1/api/private/notifications/my",
+      "description": "List current user notifications.",
       "body": {},
       "headers": [
         {
@@ -528,16 +1433,16 @@
       "settingSendCookies": true,
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
-      "afterResponseScript": "const body = await insomnia.response.json();\nconst data = body && body.response;\nif (Array.isArray(data) && data.length > 0) {\n  const first = data[0];\n  if (first?.id) await insomnia.environment.set('image_id', first.id);\n  if (first?.url) await insomnia.environment.set('image_url', first.url);\n  if (first?.uploader?.id) await insomnia.environment.set('image_owner_id', first.uploader.id);\n}\nconsole.log('[image-admin] all images response processed');\n"
+      "afterResponseScript": "const body = await insomnia.response.json(); const list = body && body.response; if (Array.isArray(list) && list.length > 0 && list[0]?.id) await insomnia.environment.set('notification_id', list[0].id);"
     },
     {
-      "_id": "req_admin_images_by_user",
+      "_id": "req_notifications_read",
       "_type": "request",
-      "parentId": "fld_image_admin",
-      "name": "List Images By User ID",
-      "method": "GET",
-      "url": "{{ _.base_url }}/v1/api/private/image/admin/list/{{ _.image_owner_id }}",
-      "description": "Lists images for image_owner_id. Requires VIEW_OTHER_FILES.",
+      "parentId": "fld_private_notifications",
+      "name": "Read Notification",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/v1/api/private/notifications/action/read/{{ _.notification_id }}",
+      "description": "Mark notification as read.",
       "body": {},
       "headers": [
         {
@@ -555,8 +1460,76 @@
       "settingStoreCookies": true,
       "settingSendCookies": true,
       "settingEncodeUrl": true,
+      "settingRebuildPath": true
+    },
+    {
+      "_id": "req_roadmap_add",
+      "_type": "request",
+      "parentId": "fld_private_roadmap",
+      "name": "Add Task",
+      "method": "POST",
+      "url": "{{ _.base_url }}/v1/api/private/roadmap/admin/task/add",
+      "description": "Create roadmap task.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"{{ _.roadmap_title }}\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -2000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
       "settingRebuildPath": true,
-      "afterResponseScript": "const body = await insomnia.response.json();\nconst data = body && body.response;\nif (Array.isArray(data) && data.length > 0) {\n  const first = data[0];\n  if (first?.id) await insomnia.environment.set('image_id', first.id);\n  if (first?.url) await insomnia.environment.set('image_url', first.url);\n}\nconsole.log('[image-admin] images by user response processed');\n"
+      "afterResponseScript": "const body = await insomnia.response.json(); const data = body && body.response; if (data?.id) await insomnia.environment.set('roadmap_task_id', data.id);"
+    },
+    {
+      "_id": "req_roadmap_edit",
+      "_type": "request",
+      "parentId": "fld_private_roadmap",
+      "name": "Edit Task",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/v1/api/private/roadmap/admin/task/edit",
+      "description": "Edit roadmap task.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"id\": {{ _.roadmap_task_id }},\n  \"title\": \"{{ _.roadmap_title }}\",\n  \"status\": {{ _.roadmap_status }}\n}"
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-User-Agent",
+          "value": "{{ _.x_user_agent }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true
     }
   ]
 }

@@ -1,20 +1,20 @@
 # be-file-uploader
 
-`be-file-uploader` is a Go/Fiber backend for authenticated file uploads, profile and role management, albums, notifications, roadmap items, and ShareX-compatible upload flows backed by MySQL, Redis, and S3-compatible object storage.
+`be-file-uploader` is a Go/Fiber backend for authenticated file uploads, user and role administration, albums, notifications, roadmap tasks, and ShareX-compatible uploads backed by MySQL and S3-compatible object storage.
 
 ## Features
 
 - Username/password registration and login
 - DB-backed sessions with JWT access tokens and rotating refresh tokens
-- Private route authentication via bearer token or `auth_token` cookie
-- Role/permission checks on protected endpoints
-- Chunked multipart uploads to S3-compatible storage
+- Private route authentication via bearer token or `access_token` cookie
+- Route-level permission checks for protected operations
+- Multipart upload flow (`init` -> `chunk` -> `complete`) for object storage
 - Per-user storage quota tracking
 - File listing, deletion, likes, comments, downloads, and album assignment
-- Album creation, lookup, and moderation listing
-- User administration, verification, role assignment, and ShareX token management
-- Notifications and public roadmap endpoints
-- Insomnia collection for local API exploration
+- Album creation, lookup, deletion, and moderation listing
+- User administration, verification, role assignment, and ShareX token reset
+- Notification list/read endpoints and public roadmap listing
+- Importable Insomnia collection for local API exploration
 
 ## Quick Start
 
@@ -44,8 +44,8 @@ Import:
 
 - [docs/insomnia/be-file-uploader.insomnia.json](docs/insomnia/be-file-uploader.insomnia.json)
 
-The collection may lag behind newer API routes. Use the Markdown API reference as the source of truth for the current route catalog.
+The collection is aligned with the current route layout under `/v1/api/public/*` and `/v1/api/private/*`.
 
 ## Open-Source Notes
 
-The documentation intentionally calls out current implementation caveats so contributors and [frontend](https://github.com/caseapia/fe-file-uploader) integrators can work against the real behavior of the service today, not only the intended behavior.
+The docs intentionally describe real implementation behavior and known caveats so contributors can work against the current service behavior, not only intended behavior.

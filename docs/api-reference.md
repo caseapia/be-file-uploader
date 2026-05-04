@@ -10,7 +10,7 @@ http://localhost:{APP_PORT}/v1/api
 
 ### Success Envelope
 
-Most successful JSON responses are wrapped in a top-level `response` field.
+Most successful JSON responses are wrapped in top-level `response`.
 
 ```json
 {
@@ -20,7 +20,7 @@ Most successful JSON responses are wrapped in a top-level `response` field.
 
 Exception:
 
-- `POST /public/storage/upload/sharex` returns `{ "url": "..." }` directly for ShareX compatibility.
+- `POST /public/storage/upload/sharex` returns `{ "url": "..." }` directly.
 
 ### Error Envelopes
 
@@ -48,18 +48,18 @@ Unhandled internal errors:
 - Private routes live under `/private`.
 - Private routes require an access token:
   - `Authorization: Bearer <jwt>`, or
-  - `Cookie: auth_token=<jwt>`
+  - `Cookie: access_token=<jwt>`
 
 ### Frontend Headers
 
-Recommended on every request:
+Common headers used by current handlers/middleware:
 
 ```http
 Content-Type: application/json
-X-User-Agent: your-frontend-name/version
+X-User-Agent: your-client-name/version
 ```
 
-For multipart upload chunks and ShareX upload, use `multipart/form-data` instead of JSON.
+For multipart routes (`/upload/chunk`, `/upload/sharex`) use `multipart/form-data`.
 
 ## Data Shapes
 
@@ -86,14 +86,20 @@ For multipart upload chunks and ShareX upload, use `multipart/form-data` instead
   "upload_limit": 1073741824,
   "used_storage": 0,
   "is_verified": false,
-  "albums": []
+  "albums": [],
+  "last_seen": "2026-04-11T12:00:00Z",
+  "geolocation": {
+    "country_code": "US",
+    "country": "United States",
+    "city": "New York"
+  }
 }
 ```
 
 Notes:
 
-- `private` is present only when the requester has `VIEW_PRIVATE_DATA`.
-- Password, IP fields, locale, Cloudflare ray ID, and ShareX token are hidden unless exposed through `private`.
+- `private` and `geolocation` are included only when requester has `VIEW_PRIVATE_DATA`.
+- Password and sensitive fields are never serialized directly.
 
 ### File
 
@@ -119,8 +125,8 @@ Notes:
 
 Notes:
 
-- Storage key `r2_key` is intentionally hidden from JSON responses.
-- `url` can be blank when the file is private or non-image content should not expose a direct URL.
+- `r2_key` and `uploaded_by` are hidden from JSON.
+- Depending on current visibility logic, `url` may be blank even when metadata is returned.
 
 ### Album
 
@@ -186,8 +192,6 @@ Notes:
 
 ### `GET /public/ping`
 
-Health-style utility route.
-
 Response `200`:
 
 ```json
@@ -198,8 +202,6 @@ Response `200`:
 
 ### `POST /public/auth/register`
 
-Creates a new account and immediately issues an access/refresh token pair.
-
 Request body:
 
 ```json
@@ -225,31 +227,9 @@ Response `200`:
   }
 }
 ```
-
-Behavior:
-
-- Checks that username does not already exist.
-- Creates the user.
-- Assigns the new user to role ID `1`.
-- Creates a session and issues tokens.
-
-Possible handled errors:
-
-| HTTP | `error` | Meaning |
-| --- | --- | --- |
-| `400` | validator message | Bad body or failed field validation |
-| `409` | `ERR_USER_ALREADY_EXISTS` | Username already taken |
-| `409` | `ERR_USER_REGISTER_HASHCREATION` | Password hash creation failed |
-| `409` | `ERR_USER_UNKNOWN_CREATION_ERROR` | User creation failed inside transaction |
-| `409` | `ERR_USER_ADDINROLE_FAILED` | Default role assignment failed |
-| `500` | `ERR_USER_LOOKUP_AFTER_REGISTER` | User re-read failed after creation |
-| `500` | `ERR_SESSION_CREATION` | Session row could not be created |
-| `500` | `ERR_TOKEN_GENERATION` | Token generation failed |
 
 ### `POST /public/auth/login`
 
-Authenticates an existing user and creates a new DB session.
-
 Request body:
 
 ```json
@@ -276,18 +256,7 @@ Response `200`:
 }
 ```
 
-Possible handled errors:
-
-| HTTP | `error` | Meaning |
-| --- | --- | --- |
-| `400` | validator message | Bad body or failed field validation |
-| `404` | `ERR_WRONG_CREDENTIALS` | Username not found or password mismatch |
-| `500` | `ERR_SESSION_CREATION` | Session row could not be created |
-| `500` | `ERR_TOKEN_GENERATION` | Access/refresh token generation failed |
-
 ### `POST /public/auth/refresh`
-
-Rotates the refresh token and returns a new access/refresh pair.
 
 Request body:
 
@@ -312,17 +281,7 @@ Response `200`:
 }
 ```
 
-Possible handled errors:
-
-| HTTP | `error` | Meaning |
-| --- | --- | --- |
-| `400` | validator message | Bad body or failed field validation |
-| `500` | `ERR_TOKEN_GENERATION` | Invalid/missing/expired refresh session or token generation failure |
-| `500` | `ERR_USER_NOTFOUND` | Session user no longer exists |
-
 ### `GET /public/roadmap/list`
-
-Returns roadmap tasks.
 
 Response `200`:
 
@@ -335,8 +294,6 @@ Response `200`:
 ```
 
 ### `POST /public/storage/upload/sharex`
-
-Uploads one file through a generated ShareX token.
 
 Request:
 
@@ -352,24 +309,11 @@ Response `200`:
 }
 ```
 
-Possible handled errors:
-
-| HTTP | `error` | Meaning |
-| --- | --- | --- |
-| `400` | `ERR_IMAGE_MISSING` | No multipart file named `image` |
-| `401` | `ERR_INVALID_TOKEN` | ShareX token did not match a user |
-| `413` | `ERR_IMAGE_TOO_LARGE` / `ERR_QUOTA_EXCEEDED` | File exceeds max size or user's quota |
-| `500` | `ERR_MIMETYPE` | MIME type is not supported |
-| `500` | `ERR_UPLOAD_CHUNK` | Object part upload failed |
-| `500` | `ERR_COMPLETE_MULTIPART` | Multipart completion failed |
-
 ## Private Auth Routes
 
 All routes below require a valid access token.
 
 ### `DELETE /private/auth/logout`
-
-Disables the current session.
 
 Response `200`:
 
@@ -379,22 +323,11 @@ Response `200`:
 }
 ```
 
-Possible handled errors:
-
-| HTTP | `error` | Meaning |
-| --- | --- | --- |
-| `404` | `ERR_USER_NOTFOUND` | User no longer exists |
-| `404` | `ERR_SESSION_NOTFOUND` | Session does not belong to user |
-| `404` | `ERR_SESSION_NOTACTIVE` | Session already inactive |
-| `500` | `ERR_SESSION_UPDATE` | Session update failed |
-
 ## Private User Routes
 
 All routes below require a valid access token.
 
 ### `GET /private/user/me`
-
-Returns the authenticated user.
 
 Response `200`:
 
@@ -406,17 +339,9 @@ Response `200`:
 
 ### `GET /private/user/lookup/:id`
 
-Looks up a user by numeric ID.
-
 Required permission:
 
 - `VIEW_OTHER_PROFILES`
-
-Path params:
-
-| Param | Type | Example |
-| --- | --- | --- |
-| `id` | integer | `42` |
 
 Response `200`:
 
@@ -426,14 +351,7 @@ Response `200`:
 }
 ```
 
-Notes:
-
-- Private user data is included only when the requester has `VIEW_PRIVATE_DATA`.
-- Private files are filtered when the requester is not the target and lacks `MANAGE_FILES`.
-
 ### `GET /private/user/shareX/generate`
-
-Generates and stores a ShareX upload token for the authenticated user.
 
 Required permission:
 
@@ -451,12 +369,10 @@ Response `200`:
 
 All routes below require:
 
-- a valid access token
-- permission `MANAGE_USERS`
+- valid access token
+- `MANAGE_USERS`
 
 ### `GET /private/user/admin/users`
-
-Returns up to 30 users.
 
 Response `200`:
 
@@ -468,8 +384,6 @@ Response `200`:
 
 ### `PUT /private/user/admin/role/add`
 
-Adds a role to a user.
-
 Request body:
 
 ```json
@@ -478,24 +392,9 @@ Request body:
   "role": 3
 }
 ```
-
-Validation:
-
-- `user`: required
-- `role`: required
-
-Possible handled errors:
-
-| HTTP | `error` | Meaning |
-| --- | --- | --- |
-| `403` | `ERR_ROLE_ISSUE_FORBIDDEN` | Non-admin tried to assign a system role |
-| `404` | `ERR_USER_NOTFOUND` | User ID does not exist |
-| `404` | `ERR_ROLE_NOTFOUND...` | Role ID does not exist |
 
 ### `DELETE /private/user/admin/role/delete`
 
-Removes a role from a user.
-
 Request body:
 
 ```json
@@ -505,17 +404,7 @@ Request body:
 }
 ```
 
-Possible handled errors:
-
-| HTTP | `error` | Meaning |
-| --- | --- | --- |
-| `403` | `ERR_ROLE_ISSUE_FORBIDDEN` | Non-admin tried to remove protected role |
-| `404` | `ERR_USER_NOTFOUND` | User ID does not exist |
-| `404` | `ERR_ROLE_NOTFOUND...` | Role ID does not exist |
-
 ### `PATCH /private/user/admin/storage-limit/update`
-
-Updates a user's upload quota.
 
 Request body:
 
@@ -528,35 +417,20 @@ Request body:
 
 ### `PATCH /private/user/admin/verify/:id`
 
-Toggles a user's verification status.
-
-Path params:
-
-| Param | Type | Example |
-| --- | --- | --- |
-| `id` | integer | `2` |
+Path param `id`: integer.
 
 ### `DELETE /private/user/admin/shareX/reset/:id`
 
-Clears a user's ShareX token.
+Path param `id`: integer.
 
-Path params:
+## Private Storage Upload Routes
 
-| Param | Type | Example |
-| --- | --- | --- |
-| `id` | integer | `2` |
+All routes below require:
 
-## Private Storage Routes
-
-All routes below require a valid access token.
+- valid access token
+- `UPLOAD_FILES`
 
 ### `POST /private/storage/upload/init`
-
-Starts a multipart upload.
-
-Required permission:
-
-- `UPLOAD_FILES`
 
 Request body:
 
@@ -568,13 +442,6 @@ Request body:
   "is_private": false
 }
 ```
-
-Validation:
-
-- `original_name`: required
-- `mime_type`: required
-- `size`: required
-- `is_private`: optional boolean
 
 Accepted MIME types:
 
@@ -588,10 +455,10 @@ Accepted MIME types:
 - `application/x-rar-compressed`
 - `application/x-7z-compressed`
 
-Limit:
+Limits:
 
-- `4 GiB`
-- also constrained by the user's remaining `upload_limit`
+- `4 GiB` file limit
+- user quota limit (`upload_limit - used_storage`)
 
 Response `200`:
 
@@ -599,18 +466,12 @@ Response `200`:
 {
   "response": {
     "upload_id": "s3-upload-id",
-    "key": "images/dev/2/2026-04/generated.png"
+    "key": "images/dev/2/2026-04/file__ABCD1234.png"
   }
 }
 ```
 
 ### `POST /private/storage/upload/chunk`
-
-Uploads one multipart part.
-
-Required permission:
-
-- `UPLOAD_FILES`
 
 Request:
 
@@ -630,30 +491,14 @@ Response `200`:
 }
 ```
 
-Possible handled errors:
-
-| HTTP | `error` | Meaning |
-| --- | --- | --- |
-| `400` | `ERR_INVALID_PARAMS` | Missing upload ID/key or invalid part number |
-| `400` | `ERR_CHUNK_MISSING` | No multipart file named `chunk` |
-| `500` | `ERR_OPEN_IMAGE` | Multipart file open failed |
-| `500` | `ERR_FILE_READING` | File read failed |
-| `500` | `ERR_UPLOAD_CHUNK` | Object storage part upload failed |
-
 ### `POST /private/storage/upload/complete`
-
-Completes a multipart upload and creates the DB file row.
-
-Required permission:
-
-- `UPLOAD_FILES`
 
 Request body:
 
 ```json
 {
   "upload_id": "s3-upload-id",
-  "key": "images/dev/2/2026-04/generated.png",
+  "key": "images/dev/2/2026-04/file__ABCD1234.png",
   "original_name": "photo.png",
   "mime_type": "image/png",
   "size": 245901,
@@ -675,9 +520,9 @@ Response `201`:
 }
 ```
 
-### `POST /private/storage/delete`
+## Private Storage File Routes
 
-Deletes a file by ID.
+### `POST /private/storage/action/delete`
 
 Required permission:
 
@@ -691,10 +536,6 @@ Request body:
 }
 ```
 
-Validation:
-
-- `image_id`: required, integer, minimum `1`
-
 Response `200`:
 
 ```json
@@ -706,11 +547,7 @@ Response `200`:
 }
 ```
 
-Deletion succeeds when the requester owns the file or has `MANAGE_FILES`.
-
 ### `GET /private/storage/my`
-
-Returns files uploaded by the authenticated user.
 
 Required permission:
 
@@ -726,110 +563,33 @@ Response `200`:
 
 ### `GET /private/storage/list`
 
-Returns all files visible to the requester.
-
 Required permission:
 
 - `VIEW_OTHER_FILES`
 
-Notes:
+Response `200`:
 
-- Private files are filtered unless the requester has `MANAGE_FILES`.
-- URLs can still be blanked by `ResolveURL`.
+```json
+{
+  "response": []
+}
+```
 
 ### `GET /private/storage/list/:id`
 
-Returns files uploaded by the user with ID `:id`.
-
 Required permission:
 
 - `VIEW_OTHER_FILES`
+
+Returns public files for the target user ID.
 
 ### `GET /private/storage/post/:id`
 
-Returns one file/post by ID.
-
-Required permission:
-
-- `VIEW_OTHER_FILES`
-
-Possible handled errors:
-
-| HTTP | `error` | Meaning |
-| --- | --- | --- |
-| `404` | `ERR_IMAGE_NOTFOUND` | File does not exist or is private to another user |
-
-### `PATCH /private/storage/post/action/like/:id`
-
-Adds a like to a file/post.
-
 Required permission:
 
 - `VIEW_OTHER_FILES`
 
 Response `200`:
-
-```json
-{
-  "response": true
-}
-```
-
-### `DELETE /private/storage/post/action/likeRemove/:id`
-
-Removes a like from a file/post.
-
-Required permission:
-
-- `VIEW_OTHER_FILES`
-
-Response `200`:
-
-```json
-{
-  "response": true
-}
-```
-
-### `GET /private/storage/post/action/download/:id`
-
-Increments download count and returns the file URL.
-
-Required permission:
-
-- `DOWNLOAD_OTHERS_FILES`
-
-Response `201`:
-
-```json
-{
-  "response": "https://cdn.example.com/images/..."
-}
-```
-
-### `POST /private/storage/post/action/addComment`
-
-Adds a comment to a file/post.
-
-Required permission:
-
-- `VIEW_OTHER_FILES`
-
-Request body:
-
-```json
-{
-  "post_id": 10,
-  "content": "Looks good"
-}
-```
-
-Validation:
-
-- `post_id`: required, minimum `1`
-- `content`: required, min `1`
-
-Response `201`:
 
 ```json
 {
@@ -837,9 +597,9 @@ Response `201`:
 }
 ```
 
-### `PUT /private/storage/album/put`
+## Private Storage Action Routes
 
-Adds a file to an album.
+### `PUT /private/storage/action/album/put`
 
 Required permission:
 
@@ -854,9 +614,7 @@ Request body:
 }
 ```
 
-### `DELETE /private/storage/album/delete`
-
-Removes a file from its album.
+### `DELETE /private/storage/action/album/delete`
 
 Required permission:
 
@@ -870,13 +628,98 @@ Request body:
 }
 ```
 
+### `PATCH /private/storage/action/like/:id`
+
+Required permission:
+
+- `VIEW_OTHER_FILES`
+
+Response `200`:
+
+```json
+{
+  "response": true
+}
+```
+
+### `DELETE /private/storage/action/likeRemove/:id`
+
+Required permission:
+
+- `VIEW_OTHER_FILES`
+
+Response `200`:
+
+```json
+{
+  "response": true
+}
+```
+
+### `GET /private/storage/action/download/:id`
+
+Required permission:
+
+- `DOWNLOAD_OTHERS_FILES`
+
+Response `201`:
+
+```json
+{
+  "response": "https://cdn.example.com/images/..."
+}
+```
+
+### `POST /private/storage/action/addComment`
+
+Required permission:
+
+- `VIEW_OTHER_FILES`
+
+Request body:
+
+```json
+{
+  "post_id": 10,
+  "content": "Looks good"
+}
+```
+
+Response `201`:
+
+```json
+{
+  "response": {}
+}
+```
+
+### `PUT /private/storage/action/access/grant`
+
+Request body:
+
+```json
+{
+  "file_id": 10,
+  "user_id": 1
+}
+```
+
+### `DELETE /private/storage/action/access/remove`
+
+Request body:
+
+```json
+{
+  "file_id": 10,
+  "user_id": 1
+}
+```
+
 ## Private Album Routes
 
 All routes below require a valid access token.
 
-### `POST /private/album/create`
-
-Creates an album.
+### `POST /private/album/action/create`
 
 Required permission:
 
@@ -891,11 +734,6 @@ Request body:
 }
 ```
 
-Validation:
-
-- `album_name`: required, min `3`, max `64`
-- `is_private`: optional boolean
-
 Response `201`:
 
 ```json
@@ -904,13 +742,7 @@ Response `201`:
 }
 ```
 
-Implementation note:
-
-- The request field is named `is_private`, but the model stores `options.is_public` from that boolean value.
-
-### `DELETE /private/album/delete/:id`
-
-Deletes an album.
+### `DELETE /private/album/action/delete/:id`
 
 Required permission:
 
@@ -926,17 +758,11 @@ Response `200`:
 
 ### `GET /private/album/lookup/:id`
 
-Looks up an album.
-
 Required permission:
 
 - `VIEW_OWN_FILES`
 
-Private albums are visible only to the owner or users with `MANAGE_FILES`.
-
 ### `GET /private/album/lookupAll`
-
-Returns all albums.
 
 Required permission:
 
@@ -946,16 +772,14 @@ Required permission:
 
 All routes below require:
 
-- a valid access token
-- permission `MANAGE_ROLES`
+- valid access token
+- `MANAGE_ROLES`
 
 ### `GET /private/roles/admin/all`
 
-Returns all roles.
+Response `200` with role array.
 
 ### `POST /private/roles/admin/create`
-
-Creates a role.
 
 Request body:
 
@@ -968,23 +792,9 @@ Request body:
 }
 ```
 
-Validation:
-
-- `name`: required
-- `color`: required, valid hex color
-- `permissions`: required
-
-Response `201`:
-
-```json
-{
-  "response": {}
-}
-```
+Response `201`.
 
 ### `PATCH /private/roles/admin/edit`
-
-Updates a role.
 
 Request body:
 
@@ -998,17 +808,9 @@ Request body:
 }
 ```
 
-Response `201`:
-
-```json
-{
-  "response": {}
-}
-```
+Response `201`.
 
 ### `DELETE /private/roles/admin/delete`
-
-Deletes a role.
 
 Request body:
 
@@ -1032,8 +834,6 @@ All routes below require a valid access token.
 
 ### `GET /private/notifications/my`
 
-Returns notifications for the authenticated user.
-
 Response `200`:
 
 ```json
@@ -1044,8 +844,6 @@ Response `200`:
 
 ### `PATCH /private/notifications/action/read/:id`
 
-Marks a notification as read.
-
 Response `200`:
 
 ```json
@@ -1054,23 +852,14 @@ Response `200`:
 }
 ```
 
-Possible handled errors:
-
-| HTTP | `error` | Meaning |
-| --- | --- | --- |
-| `403` | `ERR_NOTIFICATION_FORBIDDEN` | Notification belongs to another user |
-| `404` | `ERR_NOTIFICATION_NOTFOUND` | Notification ID does not exist |
-
 ## Private Roadmap Admin Routes
 
 All routes below require:
 
-- a valid access token
-- permission `DEVELOPER`
+- valid access token
+- `DEVELOPER`
 
 ### `POST /private/roadmap/admin/task/add`
-
-Creates a roadmap task.
 
 Request body:
 
@@ -1080,21 +869,9 @@ Request body:
 }
 ```
 
-Validation:
-
-- `title`: required, min `3`, max `200`
-
-Response `201`:
-
-```json
-{
-  "response": {}
-}
-```
+Response `201`.
 
 ### `PATCH /private/roadmap/admin/task/edit`
-
-Updates a roadmap task.
 
 Request body:
 
@@ -1106,61 +883,59 @@ Request body:
 }
 ```
 
-Validation:
-
-- `id`: required
-- `title`: required, min `3`, max `200`
-- `status`: roadmap enum value
-
-Possible handled errors:
-
-| HTTP | `error` | Meaning |
-| --- | --- | --- |
-| `404` | `ERR_TASK_NOTFOUND` | Task ID does not exist |
+Response `200`.
 
 ## Route Matrix
 
-| Method | Path | Auth | Permission |
-| --- | --- | --- | --- |
-| `GET` | `/v1/api/public/ping` | no | no |
-| `POST` | `/v1/api/public/auth/register` | no | no |
-| `POST` | `/v1/api/public/auth/login` | no | no |
-| `POST` | `/v1/api/public/auth/refresh` | no | no |
-| `GET` | `/v1/api/public/roadmap/list` | no | no |
-| `POST` | `/v1/api/public/storage/upload/sharex` | ShareX token | no role check |
-| `DELETE` | `/v1/api/private/auth/logout` | yes | no |
-| `GET` | `/v1/api/private/user/me` | yes | no |
-| `GET` | `/v1/api/private/user/lookup/:id` | yes | `VIEW_OTHER_PROFILES` |
-| `GET` | `/v1/api/private/user/shareX/generate` | yes | `UPLOAD_FILES` |
-| `GET` | `/v1/api/private/user/admin/users` | yes | `MANAGE_USERS` |
-| `PUT` | `/v1/api/private/user/admin/role/add` | yes | `MANAGE_USERS` |
-| `DELETE` | `/v1/api/private/user/admin/role/delete` | yes | `MANAGE_USERS` |
-| `PATCH` | `/v1/api/private/user/admin/storage-limit/update` | yes | `MANAGE_USERS` |
-| `PATCH` | `/v1/api/private/user/admin/verify/:id` | yes | `MANAGE_USERS` |
-| `DELETE` | `/v1/api/private/user/admin/shareX/reset/:id` | yes | `MANAGE_USERS` |
-| `POST` | `/v1/api/private/storage/upload/init` | yes | `UPLOAD_FILES` |
-| `POST` | `/v1/api/private/storage/upload/chunk` | yes | `UPLOAD_FILES` |
-| `POST` | `/v1/api/private/storage/upload/complete` | yes | `UPLOAD_FILES` |
-| `POST` | `/v1/api/private/storage/delete` | yes | `UPLOAD_FILES` |
-| `GET` | `/v1/api/private/storage/my` | yes | `VIEW_OWN_FILES` |
-| `GET` | `/v1/api/private/storage/list` | yes | `VIEW_OTHER_FILES` |
-| `GET` | `/v1/api/private/storage/list/:id` | yes | `VIEW_OTHER_FILES` |
-| `PUT` | `/v1/api/private/storage/album/put` | yes | `UPLOAD_FILES` |
-| `DELETE` | `/v1/api/private/storage/album/delete` | yes | `UPLOAD_FILES` |
-| `PATCH` | `/v1/api/private/storage/post/action/like/:id` | yes | `VIEW_OTHER_FILES` |
-| `DELETE` | `/v1/api/private/storage/post/action/likeRemove/:id` | yes | `VIEW_OTHER_FILES` |
-| `GET` | `/v1/api/private/storage/post/action/download/:id` | yes | `DOWNLOAD_OTHERS_FILES` |
-| `POST` | `/v1/api/private/storage/post/action/addComment` | yes | `VIEW_OTHER_FILES` |
-| `GET` | `/v1/api/private/storage/post/:id` | yes | `VIEW_OTHER_FILES` |
-| `POST` | `/v1/api/private/album/create` | yes | `UPLOAD_FILES` |
-| `DELETE` | `/v1/api/private/album/delete/:id` | yes | `UPLOAD_FILES` |
-| `GET` | `/v1/api/private/album/lookup/:id` | yes | `VIEW_OWN_FILES` |
-| `GET` | `/v1/api/private/album/lookupAll` | yes | `MANAGE_FILES` |
-| `GET` | `/v1/api/private/roles/admin/all` | yes | `MANAGE_ROLES` |
-| `POST` | `/v1/api/private/roles/admin/create` | yes | `MANAGE_ROLES` |
-| `PATCH` | `/v1/api/private/roles/admin/edit` | yes | `MANAGE_ROLES` |
-| `DELETE` | `/v1/api/private/roles/admin/delete` | yes | `MANAGE_ROLES` |
-| `GET` | `/v1/api/private/notifications/my` | yes | no route-level permission |
-| `PATCH` | `/v1/api/private/notifications/action/read/:id` | yes | no route-level permission |
-| `POST` | `/v1/api/private/roadmap/admin/task/add` | yes | `DEVELOPER` |
-| `PATCH` | `/v1/api/private/roadmap/admin/task/edit` | yes | `DEVELOPER` |
+| Method   | Path                                              | Auth         | Permission                |
+|----------|---------------------------------------------------|--------------|---------------------------|
+| `GET`    | `/v1/api/public/ping`                             | no           | no                        |
+| `POST`   | `/v1/api/public/auth/register`                    | no           | no                        |
+| `POST`   | `/v1/api/public/auth/login`                       | no           | no                        |
+| `POST`   | `/v1/api/public/auth/refresh`                     | no           | no                        |
+| `GET`    | `/v1/api/public/roadmap/list`                     | no           | no                        |
+| `POST`   | `/v1/api/public/storage/upload/sharex`            | ShareX token | no role check             |
+| `DELETE` | `/v1/api/private/auth/logout`                     | yes          | no                        |
+| `GET`    | `/v1/api/private/user/me`                         | yes          | no                        |
+| `GET`    | `/v1/api/private/user/lookup/:id`                 | yes          | `VIEW_OTHER_PROFILES`     |
+| `GET`    | `/v1/api/private/user/shareX/generate`            | yes          | `UPLOAD_FILES`            |
+| `GET`    | `/v1/api/private/user/admin/users`                | yes          | `MANAGE_USERS`            |
+| `PUT`    | `/v1/api/private/user/admin/role/add`             | yes          | `MANAGE_USERS`            |
+| `DELETE` | `/v1/api/private/user/admin/role/delete`          | yes          | `MANAGE_USERS`            |
+| `PATCH`  | `/v1/api/private/user/admin/storage-limit/update` | yes          | `MANAGE_USERS`            |
+| `PATCH`  | `/v1/api/private/user/admin/verify/:id`           | yes          | `MANAGE_USERS`            |
+| `DELETE` | `/v1/api/private/user/admin/shareX/reset/:id`     | yes          | `MANAGE_USERS`            |
+| `POST`   | `/v1/api/private/storage/upload/init`             | yes          | `UPLOAD_FILES`            |
+| `POST`   | `/v1/api/private/storage/upload/chunk`            | yes          | `UPLOAD_FILES`            |
+| `POST`   | `/v1/api/private/storage/upload/complete`         | yes          | `UPLOAD_FILES`            |
+| `DELETE` | `/v1/api/private/storage/action/delete`           | yes          | `UPLOAD_FILES`            |
+| `GET`    | `/v1/api/private/storage/my`                      | yes          | `VIEW_OWN_FILES`          |
+| `GET`    | `/v1/api/private/storage/list`                    | yes          | `VIEW_OTHER_FILES`        |
+| `GET`    | `/v1/api/private/storage/list/:id`                | yes          | `VIEW_OTHER_FILES`        |
+| `PUT`    | `/v1/api/private/storage/action/album/put`        | yes          | `UPLOAD_FILES`            |
+| `DELETE` | `/v1/api/private/storage/action/album/delete`     | yes          | `UPLOAD_FILES`            |
+| `PATCH`  | `/v1/api/private/storage/action/like/:id`         | yes          | `VIEW_OTHER_FILES`        |
+| `DELETE` | `/v1/api/private/storage/action/likeRemove/:id`   | yes          | `VIEW_OTHER_FILES`        |
+| `GET`    | `/v1/api/private/storage/action/download/:id`     | yes          | `DOWNLOAD_OTHERS_FILES`   |
+| `POST`   | `/v1/api/private/storage/action/addComment`       | yes          | `VIEW_OTHER_FILES`        |
+| `PUT`    | `/v1/api/private/storage/action/access/grant`     | yes          | no                        |
+| `DELETE` | `v1/api/private/storage/action/access/remove`     | yes          | no                        |
+| `GET`    | `/v1/api/private/storage/post/:id`                | yes          | `VIEW_OTHER_FILES`        |
+| `POST`   | `/v1/api/private/album/action/create`             | yes          | `UPLOAD_FILES`            |
+| `DELETE` | `/v1/api/private/album/action/delete/:id`         | yes          | `UPLOAD_FILES`            |
+| `GET`    | `/v1/api/private/album/lookup/:id`                | yes          | `VIEW_OWN_FILES`          |
+| `GET`    | `/v1/api/private/album/lookupAll`                 | yes          | `MANAGE_FILES`            |
+| `GET`    | `/v1/api/private/roles/admin/all`                 | yes          | `MANAGE_ROLES`            |
+| `POST`   | `/v1/api/private/roles/admin/create`              | yes          | `MANAGE_ROLES`            |
+| `PATCH`  | `/v1/api/private/roles/admin/edit`                | yes          | `MANAGE_ROLES`            |
+| `DELETE` | `/v1/api/private/roles/admin/delete`              | yes          | `MANAGE_ROLES`            |
+| `GET`    | `/v1/api/private/notifications/my`                | yes          | no route-level permission |
+| `PATCH`  | `/v1/api/private/notifications/action/read/:id`   | yes          | no route-level permission |
+| `POST`   | `/v1/api/private/roadmap/admin/task/add`          | yes          | `DEVELOPER`               |
+| `PATCH`  | `/v1/api/private/roadmap/admin/task/edit`         | yes          | `DEVELOPER`               |
+
+## Implementation Caveats
+
+- Several handlers parse `:id` via `strconv.Atoi` and ignore parse errors.
+- Current file URL visibility logic can blank `url` on endpoints that still return file metadata.
+- `/private/storage/my` depends on current query/schema assumptions around grant alias `fg`.

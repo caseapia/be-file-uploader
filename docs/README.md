@@ -1,23 +1,23 @@
 # Documentation Index
 
-This folder contains developer-facing and frontend-facing documentation for `be-file-uploader`.
+This folder contains developer-facing and contributor-facing documentation for `be-file-uploader`.
 
 ## Audience
 
 - Backend developers who need to run, extend, or review the service.
-- Frontend developers who need exact request/response contracts, auth flow details, and operational caveats.
-- Open-source contributors who need a quick map of the codebase and local setup.
+- Frontend and API integrators who need exact request/response contracts and auth flow details.
+- Open-source contributors who need a quick map of the codebase and current caveats.
 
 ## Documents
 
 | File                                                                               | Purpose                                                                                         |
 |------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------|
-| [getting-started.md](getting-started.md)                                           | Local setup, infrastructure, environment variables, runtime flags, and first-run workflow        |
-| [api-reference.md](api-reference.md)                                               | Full route catalog, request/response contracts, auth rules, permissions, and frontend notes      |
-| [authentication.md](authentication.md)                                             | JWT + refresh-token flow, session model, logout behavior, ShareX token usage, and client advice |
-| [errors.md](errors.md)                                                             | Response envelope, validation behavior, known error codes, and frontend error-handling guidance |
-| [architecture.md](architecture.md)                                                 | Project structure, request flow, persistence model, permissions, and implementation caveats      |
-| [insomnia/be-file-uploader.insomnia.json](insomnia/be-file-uploader.insomnia.json) | Importable Insomnia collection for API exploration                                              |
+| [getting-started.md](getting-started.md)                                           | Local setup, infrastructure assumptions, environment variables, runtime flags, and first-run flow |
+| [api-reference.md](api-reference.md)                                               | Full route catalog, request/response contracts, auth rules, and permission gates              |
+| [authentication.md](authentication.md)                                             | JWT + refresh-token flow, session lifecycle, middleware behavior, and ShareX token auth        |
+| [errors.md](errors.md)                                                             | Response envelopes, validation behavior, and current error catalog by feature area             |
+| [architecture.md](architecture.md)                                                 | Project structure, request flow, persistence model, permission model, and implementation caveats |
+| [insomnia/be-file-uploader.insomnia.json](insomnia/be-file-uploader.insomnia.json) | Importable Insomnia collection aligned with current routes                                      |
 
 ## What This Service Does
 
@@ -28,7 +28,7 @@ This folder contains developer-facing and frontend-facing documentation for `be-
 - JWT access tokens plus rotating refresh tokens.
 - User profile lookup and user administration.
 - Role and permission administration.
-- Chunked file upload/list/delete endpoints backed by object storage.
+- Multipart file upload/list/delete endpoints backed by object storage.
 - Albums, likes, comments, downloads, and notifications.
 - Public roadmap listing with developer-only roadmap editing.
 - ShareX token generation and public ShareX upload.
@@ -44,9 +44,9 @@ Base prefix: `/v1/api`
 | Private auth          | `DELETE /private/auth/logout` |
 | Private user          | `GET /private/user/me`, `GET /private/user/lookup/:id`, `GET /private/user/shareX/generate` |
 | Private user admin    | `GET /private/user/admin/users`, `PUT /private/user/admin/role/add`, `DELETE /private/user/admin/role/delete`, `PATCH /private/user/admin/storage-limit/update`, `PATCH /private/user/admin/verify/:id`, `DELETE /private/user/admin/shareX/reset/:id` |
-| Private storage       | `POST /private/storage/upload/init`, `POST /private/storage/upload/chunk`, `POST /private/storage/upload/complete`, `POST /private/storage/delete`, `GET /private/storage/my`, `GET /private/storage/list`, `GET /private/storage/list/:id`, `GET /private/storage/post/:id` |
-| Private post actions  | `PATCH /private/storage/post/action/like/:id`, `DELETE /private/storage/post/action/likeRemove/:id`, `GET /private/storage/post/action/download/:id`, `POST /private/storage/post/action/addComment` |
-| Private albums        | `POST /private/album/create`, `DELETE /private/album/delete/:id`, `GET /private/album/lookup/:id`, `GET /private/album/lookupAll` |
+| Private storage       | `POST /private/storage/upload/init`, `POST /private/storage/upload/chunk`, `POST /private/storage/upload/complete`, `POST /private/storage/action/delete`, `GET /private/storage/my`, `GET /private/storage/list`, `GET /private/storage/list/:id`, `GET /private/storage/post/:id` |
+| Private storage actions | `PUT /private/storage/action/album/put`, `DELETE /private/storage/action/album/delete`, `PATCH /private/storage/action/like/:id`, `DELETE /private/storage/action/likeRemove/:id`, `GET /private/storage/action/download/:id`, `POST /private/storage/action/addComment` |
+| Private albums        | `POST /private/album/action/create`, `DELETE /private/album/action/delete/:id`, `GET /private/album/lookup/:id`, `GET /private/album/lookupAll` |
 | Private roles admin   | `GET /private/roles/admin/all`, `POST /private/roles/admin/create`, `PATCH /private/roles/admin/edit`, `DELETE /private/roles/admin/delete` |
 | Private notifications | `GET /private/notifications/my`, `PATCH /private/notifications/action/read/:id` |
 | Private roadmap admin | `POST /private/roadmap/admin/task/add`, `PATCH /private/roadmap/admin/task/edit` |
@@ -79,20 +79,11 @@ Unhandled internal failures use:
 }
 ```
 
-## Frontend Quick Notes
-
-- Private endpoints accept the access token either in `Authorization: Bearer <jwt>` or in the `auth_token` cookie.
-- The server stores `X-User-Agent` in session metadata during login, refresh, and logout. Set it consistently from frontend clients.
-- Refresh token rotation is mandatory: after every successful `/public/auth/refresh`, overwrite both stored tokens immediately.
-- Uploads are multipart and currently use an init/chunk/complete flow instead of a single private upload request.
-- Public ShareX upload uses a generated ShareX token and returns `{ "url": "..." }` without the standard `response` wrapper.
-- Private file URLs may be blanked in responses when the requester is not allowed to view the underlying object URL.
-
 ## Important Caveats
 
-The docs intentionally describe both the intended contracts and implementation details that matter in practice:
-
 - Registration no longer consumes an invite code; it creates a user and assigns role ID `1`.
-- Storage configuration variables are required for upload/delete flows, but the app currently does not fail fast when storage initialization fails.
-- Some path parameters are converted with `strconv.Atoi` and ignore conversion errors, so invalid IDs can behave like `0`.
-- The Insomnia export may not include every newer route. Use [api-reference.md](api-reference.md) as the current route source of truth.
+- Access-token middleware accepts `Authorization: Bearer <jwt>` and cookie `access_token`.
+- Access-token lifetime is currently `7 days` (same duration as session expiry).
+- Redis env vars exist, but Redis is not currently initialized by `CreateDatabase()`.
+- `migrations` does not include a `roadmap` table migration; contributors need to create it manually when setting up from scratch.
+- `files_grants` is registered in Bun models but has no migration file in `migrations`; contributors testing `/private/storage/my` should verify schema compatibility.

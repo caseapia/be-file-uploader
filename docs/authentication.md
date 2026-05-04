@@ -4,26 +4,26 @@
 
 The API uses a two-token model backed by a persistent session row:
 
-- Access token: short-lived JWT, sent on every private request.
+- Access token: JWT, required on private routes.
 - Refresh token: opaque random token, exchanged for a new token pair.
-- Session row: DB record that ties a user, refresh-token hash, IP metadata, user-agent metadata, active state, and expiry together.
+- Session row: DB record that ties user, refresh-hash, IP/user-agent metadata, active state, and expiry.
 
 ## Access Token
 
 Current access-token properties:
 
-| Property      | Value                            |
-|---------------|----------------------------------|
-| Algorithm     | `HS256`                          |
-| Secret source | `JWT_SECRET`                     |
-| Lifetime      | `15 minutes`                     |
+| Property      | Value |
+|---------------|-------|
+| Algorithm     | `HS256` |
+| Secret source | `JWT_SECRET` (`models.JWTSecret`) |
+| Lifetime      | `7 days` |
 | Claims        | `sub`, `sid`, `tv`, `iat`, `exp` |
 
 Meaning of claims:
 
 - `sub`: user ID
 - `sid`: session ID
-- `tv`: token version, currently hard-coded as `1`
+- `tv`: token version (currently `1`)
 
 ## Refresh Token
 
@@ -51,37 +51,33 @@ During login and register:
    - `ip_address`
    - `user_agent`
    - `expires_at`
-   - `last_active_at`
+   - `created_at`
 5. An access token is generated with the session ID in `sid`.
 
-Registration currently requires only `username` and `password`; it does not consume an invite code.
+Registration accepts only `username` and `password`; invite-code flow is not used.
 
 ### Refresh
 
 During refresh:
 
 1. The incoming refresh token is hashed.
-2. A session is searched by `refresh_hash`.
-3. The service loads the related user.
-4. A brand-new refresh token is generated.
-5. A new JWT is generated.
-6. The session hash, expiry, IP, and user-agent are updated.
+2. Session is searched by `refresh_hash`.
+3. New refresh token and JWT are generated.
+4. Session hash, expiry, IP, user-agent, and geo string are updated.
 
 Result:
 
 - old refresh token becomes invalid
 - new refresh token must be stored immediately
-- existing access token should also be replaced immediately
+- access token must be replaced immediately
 
 ### Logout
 
 `DELETE /private/auth/logout` disables the current session:
 
 - `is_active` is set to `false`
-- `expires_at` is set to the current time
+- `expires_at` is set to current time
 - IP and user-agent metadata are updated
-
-After logout, the same access token should fail private middleware because the backing session is inactive.
 
 ## How Private Requests Are Validated
 
@@ -90,13 +86,19 @@ After logout, the same access token should fail private middleware because the b
 Validation sequence:
 
 1. Extract token from:
-   - `auth_token` cookie, or
-   - `Authorization` header
-2. Parse JWT.
-3. Load the user from DB.
-4. Load the session from DB by JWT `sid`.
-5. Reject if session is missing, inactive, or expired.
-6. Store `user` and `session` in `ctx.Locals`.
+   - `Authorization` header (`Bearer <jwt>`), then
+   - `access_token` cookie
+2. Parse JWT and read session claims.
+3. Load user by JWT `sub`.
+4. Update user metadata (`last_ip`, `useragent`, `cf_ray_id`, `locale`, `last_seen`, `geo_string`).
+5. Load session by JWT `sid`.
+6. Reject when session is missing, inactive, or expired.
+7. Put `user` and `session` into `ctx.Locals`.
+
+Session expiry handling:
+
+- expired sessions return `ERR_USER_SESSION_EXPIRED`
+- sessions older than 2 days past expiry are deleted asynchronously
 
 ## How to Send the Access Token
 
@@ -106,35 +108,24 @@ Validation sequence:
 Authorization: Bearer <jwt>
 ```
 
-Recommended for:
-
-- mobile clients
-- backend-to-backend calls
-- Insomnia/Postman
-- SPAs that keep token in memory
-
 ### Option 2: Cookie
 
 ```http
-Cookie: auth_token=<jwt>
+Cookie: access_token=<jwt>
 ```
 
-Recommended for:
+Current middleware checks header first, then cookie.
 
-- browser flows where your own backend manages cookies
-
-Current code checks cookie first, then header.
-
-## ShareX Token
+## ShareX Token Auth
 
 ShareX upload does not use JWT auth. It uses a per-user API token:
 
 1. Authenticated users with `UPLOAD_FILES` call `GET /private/user/shareX/generate`.
-2. The returned token is stored in `users.sharex_token`.
-3. ShareX sends the token as a multipart form field named `token` to `POST /public/storage/upload/sharex`.
-4. Admins with `MANAGE_USERS` can reset another user's token with `DELETE /private/user/admin/shareX/reset/:id`.
+2. Returned token is stored in `users.sharex_token`.
+3. ShareX sends token as multipart form field `token` to `POST /public/storage/upload/sharex`.
+4. Admins with `MANAGE_USERS` can reset another user's token via `DELETE /private/user/admin/shareX/reset/:id`.
 
-ShareX upload returns:
+ShareX upload success response is not wrapped:
 
 ```json
 {
@@ -142,102 +133,18 @@ ShareX upload returns:
 }
 ```
 
-This response is intentionally not wrapped in `response`.
-
 ## `X-User-Agent`
 
-The app stores `X-User-Agent` in session metadata during login, refresh, and logout.
+`X-User-Agent` is used in:
 
-Recommended pattern:
-
-```http
-X-User-Agent: webapp/0.4.0
-```
-
-Why it matters:
-
-- useful for audit logs
-- useful when inspecting session anomalies
-- part of the data updated on refresh/logout
-
-## Frontend Integration
-
-### Recommended Browser Strategy
-
-- Keep `access_token` in memory.
-- Store `refresh_token` in the most secure storage your architecture allows.
-- On `401` or expired-access-token flow, call `/public/auth/refresh`.
-- Replace both tokens from the refresh response.
-- Retry the original request once.
-- Call `/private/auth/logout` when the user explicitly signs out.
-
-### Example Fetch Wrapper
-
-```ts
-let accessToken = "";
-let refreshToken = "";
-
-async function apiFetch(path: string, init: RequestInit = {}) {
-  const headers = new Headers(init.headers);
-  headers.set("X-User-Agent", "frontend/1.0.0");
-
-  if (accessToken) {
-    headers.set("Authorization", `Bearer ${accessToken}`);
-  }
-
-  const response = await fetch(`/v1/api${path}`, {
-    ...init,
-    headers,
-  });
-
-  if (response.status !== 401) {
-    return response;
-  }
-
-  const refreshResponse = await fetch("/v1/api/public/auth/refresh", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-User-Agent": "frontend/1.0.0",
-    },
-    body: JSON.stringify({ refresh_token: refreshToken }),
-  });
-
-  if (!refreshResponse.ok) {
-    accessToken = "";
-    refreshToken = "";
-    throw new Error("refresh failed");
-  }
-
-  const refreshBody = await refreshResponse.json();
-  accessToken = refreshBody.response.access_token;
-  refreshToken = refreshBody.response.refresh_token;
-
-  headers.set("Authorization", `Bearer ${accessToken}`);
-  return fetch(`/v1/api${path}`, { ...init, headers });
-}
-```
-
-### Upload Integration
-
-Private upload is a three-step flow:
-
-1. `POST /private/storage/upload/init` with JSON metadata.
-2. `POST /private/storage/upload/chunk` with `multipart/form-data`.
-3. `POST /private/storage/upload/complete` with uploaded part metadata.
-
-Example chunk body fields:
-
-- `upload_id`
-- `key`
-- `part_number`
-- `chunk`
-
-Do not set JSON content type manually for the chunk request.
+- login session creation
+- refresh session update
+- logout session update
+- auth middleware user-metadata update
 
 ## Permission Gates
 
-JWT validation only proves identity. Many routes then apply `RequirePermission(...)`.
+JWT validation confirms identity. Many private routes then apply `RequirePermission(...)`.
 
 Permissions used by current routes:
 
@@ -254,7 +161,8 @@ Permissions used by current routes:
 
 ## Known Caveats
 
-- Invalid refresh-token cases currently collapse into `500 ERR_TOKEN_GENERATION` instead of a more specific `401/403` branch.
-- Middleware permission denials often use Fiber's generic `Forbidden` response.
-- Some malformed JWT errors may expose JWT library text instead of normalized project error codes.
-- ShareX upload uses token auth and a custom unwrapped response shape.
+- `models.JWTSecret` is initialized at package load time. Contributors relying on `.env` loading in `main()` should verify startup environment behavior.
+- `RefreshToken` currently ignores errors from new token generation (`newRefresh, _` and `newAccess, _`).
+- JWT parsing errors can surface as raw library errors through the global error handler.
+- Refresh lookup failures return `401 ERR_TOKEN_INVALID`.
+- `ParseJWT` returns `404 ERR_USER_NOT_FOUND` when JWT claims reference a deleted user.

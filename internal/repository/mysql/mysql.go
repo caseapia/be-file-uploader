@@ -13,6 +13,7 @@ type Repository struct {
 
 func NewRepository(db *bun.DB) *Repository {
 	db.RegisterModel((*models.UserRole)(nil))
+	db.RegisterModel((*models.FileGrants)(nil))
 
 	return &Repository{
 		DB: db,

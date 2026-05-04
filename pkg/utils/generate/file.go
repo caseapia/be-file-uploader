@@ -7,7 +7,7 @@ import (
 
 const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-func ImageID() (string, error) {
+func FileID() (string, error) {
 	codeLen := 12
 	code := make([]byte, codeLen)
 
@@ -20,5 +20,5 @@ func ImageID() (string, error) {
 		code[i] = letters[n.Int64()]
 	}
 
-	return "img__" + string(code), nil
+	return "file__" + string(code), nil
 }

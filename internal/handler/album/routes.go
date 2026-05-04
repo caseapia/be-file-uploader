@@ -9,9 +9,10 @@ import (
 
 func (h *Handler) RegisterPrivateRoutes(router fiber.Router) {
 	group := router.Group("/album")
+	action := group.Group("/action")
 
-	group.Post("/create", middleware.RequirePermission(role.FileUpload), h.CreateAlbum)
-	group.Delete("/delete/:id", middleware.RequirePermission(role.FileUpload), h.DeleteAlbum)
+	action.Post("/create", middleware.RequirePermission(role.FileUpload), h.CreateAlbum)
+	action.Delete("/delete/:id", middleware.RequirePermission(role.FileUpload), h.DeleteAlbum)
 	group.Get("/lookup/:id", middleware.RequirePermission(role.ViewOwnFiles), h.LookupAlbum)
 	group.Get("/lookupAll", middleware.RequirePermission(role.ManageFiles), h.AllAlbums)
 }

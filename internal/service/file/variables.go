@@ -1,4 +1,4 @@
-package image
+package file
 
 var allowedMime = map[string]string{
 	"image/jpeg":                   ".jpg",

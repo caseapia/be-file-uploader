@@ -1,6 +1,8 @@
 package user
 
 import (
+	"database/sql"
+	"errors"
 	"strconv"
 
 	"be-file-uploader/internal/models"
@@ -148,4 +150,18 @@ func (h *Handler) SearchSessions(ctx fiber.Ctx) error {
 	}
 
 	return validation.Response(ctx, fiber.StatusOK, sessions)
+}
+
+func (h *Handler) LookupUsersByPart(ctx fiber.Ctx) error {
+	nameStr := ctx.Params("name")
+
+	users, err := h.repo.LookupUserByPartOfName(ctx.Context(), nameStr)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fiber.NewError(fiber.StatusNotFound, "ERR_USER_NOTFOUND")
+		}
+		return err
+	}
+
+	return validation.Response(ctx, fiber.StatusOK, users)
 }

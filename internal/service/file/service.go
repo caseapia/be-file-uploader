@@ -1,4 +1,4 @@
-package image
+package file
 
 import (
 	"be-file-uploader/internal/repository/mysql"

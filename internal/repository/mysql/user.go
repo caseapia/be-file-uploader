@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"be-file-uploader/internal/models"
+	"be-file-uploader/internal/models/relations"
 
 	"github.com/uptrace/bun"
 )
@@ -24,6 +25,16 @@ func (r *Repository) LookupUserByName(ctx context.Context, name string) (*models
 		Limit(1).
 		Scan(ctx)
 	return user, err
+}
+
+func (r *Repository) LookupUserByPartOfName(ctx context.Context, name string) ([]relations.User, error) {
+	var users []relations.User
+
+	err := r.DB.NewSelect().
+		Model(&users).
+		Where("username LIKE ?", "%"+name+"%").
+		Scan(ctx)
+	return users, err
 }
 
 func (r *Repository) LookupUserByID(ctx context.Context, id int) (*models.User, error) {

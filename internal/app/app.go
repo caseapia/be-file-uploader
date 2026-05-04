@@ -104,6 +104,7 @@ func CreateApp(geo *geo.Service) (app *fiber.App, db *database.Database, err err
 				"body":     string(c.Body()),
 				"query":    c.Queries(),
 				"response": c.Response(),
+				"headers":  c.GetHeaders(),
 			}).Info("Inbound request")
 
 			return err

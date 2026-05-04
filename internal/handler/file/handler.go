@@ -14,13 +14,13 @@ import (
 )
 
 type Handler struct {
-	imageService *image.Service
-	userService  *user.Service
-	repository   *mysql.Repository
+	fileService *file.Service
+	userService *user.Service
+	repository  *mysql.Repository
 }
 
-func NewHandler(imageService *image.Service, userService *user.Service, repository *mysql.Repository) *Handler {
-	return &Handler{imageService: imageService, userService: userService, repository: repository}
+func NewHandler(fileService *file.Service, userService *user.Service, repository *mysql.Repository) *Handler {
+	return &Handler{fileService: fileService, userService: userService, repository: repository}
 }
 
 func (h *Handler) InitUpload(ctx fiber.Ctx) error {
@@ -31,7 +31,7 @@ func (h *Handler) InitUpload(ctx fiber.Ctx) error {
 		return err
 	}
 
-	resp, err := h.imageService.InitMultipartUpload(ctx.Context(), uploader, req)
+	resp, err := h.fileService.InitMultipartUpload(ctx.Context(), uploader, req)
 	if err != nil {
 		return err
 	}
@@ -54,7 +54,7 @@ func (h *Handler) UploadChunk(ctx fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "ERR_CHUNK_MISSING")
 	}
 
-	eTag, err := h.imageService.UploadChunk(ctx.Context(), uploadID, key, int32(partNumber), fileHeader)
+	eTag, err := h.fileService.UploadChunk(ctx.Context(), uploadID, key, int32(partNumber), fileHeader)
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func (h *Handler) CompleteUpload(ctx fiber.Ctx) error {
 		return err
 	}
 
-	fl, err := h.imageService.CompleteMultipartUpload(ctx.Context(), uploader, &req)
+	fl, err := h.fileService.CompleteMultipartUpload(ctx.Context(), uploader, &req)
 	if err != nil {
 		return err
 	}
@@ -78,7 +78,7 @@ func (h *Handler) CompleteUpload(ctx fiber.Ctx) error {
 	return validation.Response(ctx, fiber.StatusCreated, fl)
 }
 
-func (h *Handler) DeleteImage(ctx fiber.Ctx) error {
+func (h *Handler) DeleteFile(ctx fiber.Ctx) error {
 	var req requests.DeleteImage
 	if err := validation.ParseAndValidate(ctx, &req); err != nil {
 		return err
@@ -86,7 +86,7 @@ func (h *Handler) DeleteImage(ctx fiber.Ctx) error {
 
 	requester := account.GetUserFromContext(ctx)
 
-	usedStorage, err := h.imageService.DeleteFile(ctx, req.ImageID, requester)
+	usedStorage, err := h.fileService.DeleteFile(ctx, req.ImageID, requester)
 	if err != nil {
 		return err
 	}
@@ -97,7 +97,7 @@ func (h *Handler) DeleteImage(ctx fiber.Ctx) error {
 	})
 }
 
-func (h *Handler) LookupMyImages(ctx fiber.Ctx) error {
+func (h *Handler) LookupMyFiles(ctx fiber.Ctx) error {
 	sender := account.GetUserFromContext(ctx)
 
 	images, err := h.repository.SearchOwnFiles(ctx, sender)
@@ -108,10 +108,10 @@ func (h *Handler) LookupMyImages(ctx fiber.Ctx) error {
 	return validation.Response(ctx, fiber.StatusOK, images)
 }
 
-func (h *Handler) LookupAllImages(ctx fiber.Ctx) error {
+func (h *Handler) LookupAllFiles(ctx fiber.Ctx) error {
 	sender := account.GetUserFromContext(ctx)
 
-	images, err := h.imageService.LookupAllFiles(ctx, sender)
+	images, err := h.fileService.LookupAllFiles(ctx, sender)
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func (h *Handler) LookupAllImages(ctx fiber.Ctx) error {
 	return validation.Response(ctx, fiber.StatusOK, images)
 }
 
-func (h *Handler) LookupImagesByUserID(ctx fiber.Ctx) error {
+func (h *Handler) LookupFilesByUserID(ctx fiber.Ctx) error {
 	idStr := ctx.Params("id")
 	id, _ := strconv.Atoi(idStr)
 
@@ -138,7 +138,7 @@ func (h *Handler) AddInAlbum(ctx fiber.Ctx) error {
 		return err
 	}
 
-	img, err := h.imageService.AddImageInAlbum(ctx, sender, req.ImageID, req.AlbumID)
+	img, err := h.fileService.AddImageInAlbum(ctx, sender, req.ImageID, req.AlbumID)
 	if err != nil {
 		return err
 	}
@@ -153,7 +153,7 @@ func (h *Handler) RemoveFromAlbum(ctx fiber.Ctx) error {
 		return err
 	}
 
-	img, err := h.imageService.RemoveImageFromAlbum(ctx, sender, req.ImageID)
+	img, err := h.fileService.RemoveImageFromAlbum(ctx, sender, req.ImageID)
 	if err != nil {
 		return err
 	}
@@ -167,7 +167,7 @@ func (h *Handler) LikePost(ctx fiber.Ctx) error {
 	idStr := ctx.Params("id")
 	id, _ := strconv.Atoi(idStr)
 
-	state, err := h.imageService.ToggleLike(ctx, sender, id, true)
+	state, err := h.fileService.ToggleLike(ctx, sender, id, true)
 	if err != nil {
 		return err
 	}
@@ -181,7 +181,7 @@ func (h *Handler) RemoveLikeFromPost(ctx fiber.Ctx) error {
 	idStr := ctx.Params("id")
 	id, _ := strconv.Atoi(idStr)
 
-	state, err := h.imageService.ToggleLike(ctx, sender, id, false)
+	state, err := h.fileService.ToggleLike(ctx, sender, id, false)
 	if err != nil {
 		return err
 	}
@@ -189,13 +189,13 @@ func (h *Handler) RemoveLikeFromPost(ctx fiber.Ctx) error {
 	return validation.Response(ctx, fiber.StatusOK, state)
 }
 
-func (h *Handler) DownloadImage(ctx fiber.Ctx) error {
+func (h *Handler) DownloadFile(ctx fiber.Ctx) error {
 	sender := account.GetUserFromContext(ctx)
 
 	idStr := ctx.Params("id")
 	id, _ := strconv.Atoi(idStr)
 
-	link, err := h.imageService.DownloadFile(ctx, sender, id)
+	link, err := h.fileService.DownloadFile(ctx, sender, id)
 	if err != nil {
 		return err
 	}
@@ -211,7 +211,7 @@ func (h *Handler) AddComment(ctx fiber.Ctx) error {
 		return err
 	}
 
-	comment, err := h.imageService.AddComment(ctx, sender, req.PostID, req.Content)
+	comment, err := h.fileService.AddComment(ctx, sender, req.PostID, req.Content)
 	if err != nil {
 		return err
 	}
@@ -225,7 +225,7 @@ func (h *Handler) LookupPostByID(ctx fiber.Ctx) error {
 	idStr := ctx.Params("id")
 	id, _ := strconv.Atoi(idStr)
 
-	findedImage, err := h.imageService.FindFile(ctx, sender, id)
+	findedImage, err := h.fileService.FindFile(ctx, sender, id)
 	if err != nil {
 		return err
 	}
@@ -252,15 +252,15 @@ func (h *Handler) ShareXUpload(ctx fiber.Ctx) error {
 		IsPrivate:    true,
 	}
 
-	initResp, err := h.imageService.InitMultipartUpload(ctx.Context(), u, initReq)
+	initResp, err := h.fileService.InitMultipartUpload(ctx.Context(), u, initReq)
 	if err != nil {
 		return err
 	}
 
-	file, _ := fileHeader.Open()
-	defer file.Close()
+	f, _ := fileHeader.Open()
+	defer f.Close()
 
-	eTag, err := h.imageService.UploadChunk(ctx.Context(), initResp.UploadID, initResp.Key, 1, fileHeader)
+	eTag, err := h.fileService.UploadChunk(ctx.Context(), initResp.UploadID, initResp.Key, 1, fileHeader)
 	if err != nil {
 		return err
 	}
@@ -277,7 +277,7 @@ func (h *Handler) ShareXUpload(ctx fiber.Ctx) error {
 		},
 	}
 
-	img, err := h.imageService.CompleteMultipartUpload(ctx.Context(), u, &completeReq)
+	img, err := h.fileService.CompleteMultipartUpload(ctx.Context(), u, &completeReq)
 	if err != nil {
 		return err
 	}
@@ -285,4 +285,49 @@ func (h *Handler) ShareXUpload(ctx fiber.Ctx) error {
 	return ctx.JSON(fiber.Map{
 		"url": img.URL,
 	})
+}
+
+func (h *Handler) GrantAccess(ctx fiber.Ctx) error {
+	sender := account.GetUserFromContext(ctx)
+	var req requests.EditAccess
+	if err := validation.ParseAndValidate(ctx, &req); err != nil {
+		return err
+	}
+
+	state, err := h.fileService.GrantAccess(ctx, sender, req.FileID, req.UserID)
+	if err != nil {
+		return err
+	}
+
+	return validation.Response(ctx, fiber.StatusOK, state)
+}
+
+func (h *Handler) RemoveAccess(ctx fiber.Ctx) error {
+	sender := account.GetUserFromContext(ctx)
+	var req requests.EditAccess
+	if err := validation.ParseAndValidate(ctx, &req); err != nil {
+		return err
+	}
+
+	state, err := h.fileService.RemoveAccess(ctx, sender, req.FileID, req.UserID)
+	if err != nil {
+		return err
+	}
+
+	return validation.Response(ctx, fiber.StatusOK, state)
+}
+
+func (h *Handler) EditFileDetails(ctx fiber.Ctx) error {
+	sender := account.GetUserFromContext(ctx)
+	var req requests.EditFileDetails
+	if err := validation.ParseAndValidate(ctx, &req); err != nil {
+		return err
+	}
+
+	updatedFile, err := h.fileService.EditFileDetails(ctx, sender, req)
+	if err != nil {
+		return err
+	}
+
+	return validation.Response(ctx, fiber.StatusOK, updatedFile)
 }

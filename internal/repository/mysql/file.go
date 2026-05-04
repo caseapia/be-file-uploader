@@ -9,11 +9,11 @@ import (
 	"github.com/uptrace/bun"
 )
 
-func (r *Repository) CreateFile(ctx context.Context, tx bun.IDB, image *models.File) error {
+func (r *Repository) CreateFile(ctx context.Context, tx bun.IDB, file *models.File) (models.File, error) {
 	_, err := tx.NewInsert().
-		Model(image).
+		Model(file).
 		Exec(ctx)
-	return err
+	return *file, err
 }
 
 func (r *Repository) ReserveDiskSpace(ctx context.Context, tx bun.Tx, user *models.User, size int64) error {
@@ -45,6 +45,9 @@ func (r *Repository) SearchFileByID(ctx context.Context, id int) (*models.File, 
 		Relation("Likes.Author").
 		Relation("Comments").
 		Relation("Comments.Author").
+		Relation("Grants").
+		Relation("Grants.User").
+		Relation("Grants.GrantedBy").
 		Where("f.id = ?", id).
 		OrderExpr("f.id DESC").
 		Limit(1).
@@ -58,7 +61,10 @@ func (r *Repository) SearchOwnFiles(ctx context.Context, user *models.User) ([]m
 
 	err := r.DB.NewSelect().
 		Model(&images).
-		Where("uploaded_by = ?", user.ID).
+		ColumnExpr("f.*").
+		Where("f.uploaded_by = ?", user.ID).
+		WhereOr("EXISTS (SELECT 1 FROM files_grants AS fg WHERE fg.file_id = f.id AND fg.user_id = ?)", user.ID).
+		Group("f.id").
 		Relation("Uploader").
 		Relation("Album").
 		Relation("Album.CreatedBy").
@@ -66,8 +72,12 @@ func (r *Repository) SearchOwnFiles(ctx context.Context, user *models.User) ([]m
 		Relation("Likes.Author").
 		Relation("Comments").
 		Relation("Comments.Author").
+		Relation("Grants").
+		Relation("Grants.User").
+		Relation("Grants.GrantedBy").
 		OrderExpr("f.id DESC").
 		Scan(ctx)
+
 	return images, err
 }
 
@@ -82,6 +92,9 @@ func (r *Repository) SearchFilesByUserID(ctx context.Context, userID int) ([]mod
 		Relation("Likes.Author").
 		Relation("Comments").
 		Relation("Comments.Author").
+		Relation("Grants").
+		Relation("Grants.User").
+		Relation("Grants.GrantedBy").
 		Where("f.uploaded_by = ?", userID).
 		Where("f.is_private = ?", false).
 		OrderExpr("f.id DESC").
@@ -99,6 +112,9 @@ func (r *Repository) SearchAllFiles(ctx context.Context) ([]models.File, error) 
 		Relation("Album.CreatedBy").
 		Relation("Likes").
 		Relation("Likes.Author").
+		Relation("Grants").
+		Relation("Grants.User").
+		Relation("Grants.GrantedBy").
 		OrderExpr("f.id DESC").
 		Scan(ctx)
 
@@ -163,4 +179,29 @@ func (r *Repository) AddComment(ctx context.Context, tx bun.IDB, comment *models
 	}
 
 	return comment, nil
+}
+
+func (r *Repository) GrantAccess(ctx context.Context, tx bun.IDB, grants models.FileGrants) (err error) {
+	_, err = tx.NewInsert().
+		Model(&grants).
+		Exec(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *Repository) RemoveAccess(ctx context.Context, tx bun.IDB, user, file int) (err error) {
+	grants := new(models.FileGrants)
+
+	_, err = tx.NewDelete().
+		Model(grants).
+		Where("user_id = ? AND file_id = ?", user, file).
+		Exec(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

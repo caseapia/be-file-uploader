@@ -5,7 +5,7 @@
 The service follows a layered structure:
 
 ```text
-HTTP route -> handler -> service -> repository -> MySQL / Redis / object storage
+HTTP route -> handler -> service -> repository -> MySQL / object storage
 ```
 
 Main goals of the current structure:
@@ -14,39 +14,39 @@ Main goals of the current structure:
 - keep business rules in services
 - keep SQL in repositories
 - keep storage access in `pkg/storage`
-- keep permission checks close to route registration and sensitive service logic
+- keep permission checks at route level and in sensitive service logic
 
 ## Directory Map
 
-| Path | Responsibility |
-| --- | --- |
-| `cmd/app/main.go` | Loads `.env`, starts Fiber, handles graceful shutdown |
-| `internal/app/app.go` | Builds the Fiber app, middleware, CORS, dependency wiring, route registration |
-| `internal/database` | MySQL and Redis connection creation |
-| `internal/handler/auth` | Public auth handlers, private logout handler, and private auth middleware |
-| `internal/handler/user` | User profile, ShareX token, and user admin endpoints |
-| `internal/handler/file` | Multipart upload, file listing, file actions, album assignment, and ShareX upload endpoints |
-| `internal/handler/album` | Album create/delete/lookup endpoints |
-| `internal/handler/role` | Role admin endpoints |
-| `internal/handler/notification` | Notification list/read endpoints |
-| `internal/handler/roadmap` | Public roadmap list and developer-only roadmap editing endpoints |
-| `internal/handler/developer` | Public utility endpoints such as `/ping` |
-| `internal/middleware` | Permission middleware |
-| `internal/models` | Bun entities |
-| `internal/models/requests` | Request payload structs |
-| `internal/repository/mysql` | Concrete Bun-backed repository operations |
-| `internal/service/auth` | Registration, login, refresh, logout, JWT/session rules |
-| `internal/service/user` | User lookup, private data exposure, user admin, ShareX token rules |
-| `internal/service/file` | Upload, delete, visibility, like/comment/download, album assignment rules |
-| `internal/service/album` | Album create/delete/lookup rules |
-| `internal/service/role` | Role create/edit/delete rules |
-| `internal/service/notification` | Notification creation/read rules |
-| `internal/service/roadmap` | Roadmap list/add/edit rules |
-| `pkg/storage` | S3-compatible storage adapter |
-| `pkg/enums` | Permission and roadmap status enums |
-| `pkg/utils` | Token, validation, hashing, ID generation, and account helpers |
-| `migrations` | SQL schema files; not automatically executed by app startup |
-| `docs` | Maintained documentation and Insomnia export |
+| Path                            | Responsibility                                                                       |
+|---------------------------------|--------------------------------------------------------------------------------------|
+| `cmd/app/main.go`               | Loads `.env`, initializes geo DB, starts Fiber, handles shutdown                     |
+| `internal/app/app.go`           | Fiber config, CORS, dependency wiring, route registration                            |
+| `internal/database`             | MySQL connection setup (Redis code exists but is currently disabled at runtime)      |
+| `internal/handler/auth`         | Public auth handlers, private logout handler, auth middleware                        |
+| `internal/handler/user`         | User profile, ShareX token generation, user admin endpoints                          |
+| `internal/handler/file`         | Multipart upload flow, file listing/deletion, likes/comments/download, ShareX upload |
+| `internal/handler/album`        | Album create/delete/lookup endpoints                                                 |
+| `internal/handler/role`         | Role admin endpoints                                                                 |
+| `internal/handler/notification` | Notification list/read endpoints                                                     |
+| `internal/handler/roadmap`      | Public roadmap listing and developer-only roadmap editing                            |
+| `internal/handler/developer`    | Public utility endpoint `/ping`                                                      |
+| `internal/middleware`           | Route-level permission middleware (`ERR_NO_ACCESS`)                                  |
+| `internal/models`               | Bun entities and JSON contracts                                                      |
+| `internal/models/requests`      | Request payload structs + validation tags                                            |
+| `internal/repository/mysql`     | Bun-backed repository operations                                                     |
+| `internal/service/auth`         | Registration, login, refresh, logout, JWT/session rules                              |
+| `internal/service/user`         | User lookup, private data exposure, user admin, ShareX token auth                    |
+| `internal/service/file`         | Upload/delete/list, likes/comments/download, album assignment rules                  |
+| `internal/service/album`        | Album create/delete/lookup rules                                                     |
+| `internal/service/role`         | Role create/edit/delete rules                                                        |
+| `internal/service/notification` | Notification creation/read rules                                                     |
+| `internal/service/roadmap`      | Roadmap list/add/edit rules                                                          |
+| `pkg/storage`                   | S3-compatible storage adapter                                                        |
+| `pkg/enums`                     | Permission and roadmap status enums                                                  |
+| `pkg/utils`                     | Token, validation, hashing, account helpers, ID generation                           |
+| `migrations`                    | SQL schema files (not auto-executed on startup)                                      |
+| `docs`                          | Maintained documentation and Insomnia export                                         |
 
 ## App Wiring
 
@@ -54,16 +54,15 @@ Application composition happens in [`internal/app/app.go`](../internal/app/app.g
 
 1. Parse `--debug` flag.
 2. Connect to MySQL.
-3. Connect to Redis.
-4. Build repository.
-5. Initialize object storage.
-6. Build services.
-7. Build handlers.
-8. Register route groups:
+3. Build repository.
+4. Initialize object storage.
+5. Build services.
+6. Build handlers.
+7. Register route groups:
    - `/v1/api/public`
    - `/v1/api/private`
-9. Attach auth middleware to the private group.
-10. Attach route-level permission middleware where needed.
+8. Attach auth middleware to the private group.
+9. Attach route-level permission middleware where needed.
 
 ## Request Flow
 
@@ -96,14 +95,14 @@ Client
 
 ```text
 Client
-  -> upload/init JSON metadata
+  -> POST /private/storage/upload/init (JSON metadata)
   -> service validates quota and MIME type
   -> storage creates multipart upload
-  -> upload/chunk multipart part(s)
-  -> storage uploads part(s)
-  -> upload/complete JSON part list
+  -> POST /private/storage/upload/chunk (multipart chunk)
+  -> storage uploads part
+  -> POST /private/storage/upload/complete (parts metadata)
   -> storage completes multipart upload
-  -> repository reserves quota and stores file row
+  -> repository reserves quota and inserts file row
 ```
 
 ## Routing Layout
@@ -124,8 +123,11 @@ Private:
 - `/private/auth/logout`
 - `/private/user/*`
 - `/private/user/admin/*`
-- `/private/storage/*`
-- `/private/album/*`
+- `/private/storage/upload/*`
+- `/private/storage/action/*`
+- `/private/storage/post/:id`
+- `/private/album/action/*`
+- `/private/album/lookup*`
 - `/private/roles/admin/*`
 - `/private/notifications/*`
 - `/private/roadmap/admin/*`
@@ -138,13 +140,13 @@ Private:
 
 - identity fields
 - password hash
-- IP/user-agent/Cloudflare registration metadata
+- IP/user-agent/Cloudflare metadata
 - locale
 - upload quota and used storage
 - verification status
 - ShareX token
 - many-to-many roles relation
-- has-many storage and albums relations
+- has-many files and albums
 
 ### Sessions
 
@@ -172,7 +174,7 @@ Private:
 
 `files` contains:
 
-- internal object key
+- object key (`r2_key`)
 - public URL
 - original file name
 - MIME type
@@ -192,7 +194,7 @@ Related tables store likes and comments.
 - album name
 - creator
 - timestamps
-- public/private option
+- `is_public` option
 - related file items
 
 ### Notifications
@@ -206,12 +208,7 @@ Related tables store likes and comments.
 
 ### Roadmap
 
-`roadmap` contains:
-
-- task title
-- status enum
-- creator/updater relations
-- created/updated timestamps
+`roadmap` table is used by services and models, but no migration file is currently shipped for it.
 
 ## Permissions
 
@@ -237,9 +234,8 @@ Permission evaluation:
 
 - a user has many roles
 - a role has a JSON array of permissions
-- `ADMIN` behaves as an override in `Role.HasPermission`
+- `ADMIN` works as an override in `Role.HasPermission`
 - route-level checks use `middleware.RequirePermission(...)`
-- some services perform additional ownership/visibility checks
 
 ## Storage Design
 
@@ -269,45 +265,47 @@ images/dev/{userID}/{YYYY-MM}/{generatedID+ext}
 
 ## Developer Caveats
 
-These are current implementation caveats worth knowing before contributing.
-
 ### Storage init is not fail-fast
 
-`CreateApp()` calls storage initialization but does not stop startup on storage initialization error. Upload/delete problems can surface only at request time.
+`CreateApp()` does not stop startup when `NewStorage(...)` returns an error, so upload/delete failures can appear only at request time.
 
-### Invite documentation is obsolete
+### Invite flow is removed
 
-Older docs described invite-based registration. Current registration accepts only `username` and `password`, and assigns role ID `1`.
+Registration now accepts only `username` and `password`. It still auto-assigns role ID `1`.
+
+### Access token extraction details
+
+Auth middleware checks `Authorization` header first, then cookie `access_token`.
+
+### Token lifetime is long-lived
+
+`GenerateAccessToken` currently sets JWT expiry to `7 days`.
 
 ### Album privacy naming mismatch
 
-`CreateAlbum` accepts request field `is_private`, but passes that value into `AlbumOptions.IsPublic`. Frontend integrations should verify desired semantics before depending on this flag.
+`CreateAlbum` request uses field `is_private`, but handler passes it directly into model field `options.is_public`.
 
-### Some ID parsing ignores errors
+### Some ID parsing ignores conversion errors
 
-Several handlers convert `:id` with `strconv.Atoi` and ignore the returned error. A non-numeric path parameter can become `0` and then fail through normal lookup or permission behavior.
+Several handlers parse `:id` using `strconv.Atoi` and ignore conversion errors, so malformed path params may become `0`.
 
-### File URL visibility has service-level rules
+### `/private/storage/my` depends on schema assumptions
 
-`File.ResolveURL` clears `url` for non-image files and for private files when the requester is not allowed to view the object URL. Some endpoints can return file metadata with an empty URL.
+`SearchOwnFiles` query references grant alias `fg`. Contributors setting up a fresh DB should verify `files_grants` schema compatibility with current query behavior.
 
-### ShareX upload has a custom response shape
+### ShareX upload response is custom
 
-`POST /public/storage/upload/sharex` returns `{ "url": "..." }` directly instead of using the shared `validation.Response` wrapper.
-
-### Route naming is historical
-
-File, post, storage, and album actions are split across `/storage/*` and `/album/*`. Preserve the exact paths in client integrations rather than inferring REST-style resource names.
+`POST /public/storage/upload/sharex` returns `{ "url": "..." }` directly instead of using the standard `response` wrapper.
 
 ## Contribution Notes
 
-When adding a new endpoint:
+When adding or changing an endpoint:
 
-1. Add request structs to `internal/models/requests` if needed.
+1. Add request structs in `internal/models/requests` if needed.
 2. Add repository method(s) for DB access.
 3. Add service method(s) for business logic.
 4. Add handler method(s) and route registration.
 5. Add or update route-level permission middleware.
 6. Update [api-reference.md](api-reference.md).
 7. Update [errors.md](errors.md) if new error codes are introduced.
-8. Update the Insomnia export in [`docs/insomnia/be-file-uploader.insomnia.json`](insomnia/be-file-uploader.insomnia.json) when practical.
+8. Update [`docs/insomnia/be-file-uploader.insomnia.json`](insomnia/be-file-uploader.insomnia.json).
