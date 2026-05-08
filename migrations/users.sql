@@ -37,3 +37,5 @@ alter table users
 alter table users
     modify id int auto_increment;
 
+alter table users
+    add column avatar varchar(512) null;

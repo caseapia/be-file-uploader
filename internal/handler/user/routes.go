@@ -15,6 +15,7 @@ func (h *Handler) RegisterPrivateRoutes(router fiber.Router) {
 	group.Get("/lookup/:id", middleware.RequirePermission(role.ViewOtherProfiles), h.LookupProfile)
 	group.Get("/shareX/generate", middleware.RequirePermission(role.FileUpload), h.GenerateAPIToken)
 	group.Get("/lookupByName/:name", h.LookupUsersByPart)
+	group.Patch("/avatar", h.UploadAvatar)
 
 	groupAdmin.Get("/users", middleware.RequirePermission(role.ManageUsers), h.PopulateUserList)
 	groupAdmin.Put("/role/add", middleware.RequirePermission(role.ManageUsers), h.AddUserInRole)

@@ -121,6 +121,24 @@ func (r *Repository) SearchAllFiles(ctx context.Context) ([]models.File, error) 
 	return images, err
 }
 
+func (r *Repository) SearchFileByURL(ctx context.Context, url string) (models.File, error) {
+	image := new(models.File)
+
+	err := r.DB.NewSelect().
+		Model(image).
+		Where("url = ?", url).
+		Relation("Uploader").
+		Relation("Album").
+		Relation("Album.CreatedBy").
+		Relation("Grants").
+		Relation("Grants.User").
+		Relation("Grants.GrantedBy").
+		Limit(1).
+		Scan(ctx)
+
+	return *image, err
+}
+
 func (r *Repository) DeleteFile(ctx context.Context, tx bun.IDB, image *models.File) error {
 	_, err := tx.NewDelete().
 		Model(image).

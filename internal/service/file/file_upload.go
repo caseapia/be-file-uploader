@@ -3,24 +3,20 @@ package file
 import (
 	"context"
 	"mime/multipart"
-	"os"
-	"path"
-	"strconv"
-	"time"
 
 	"be-file-uploader/internal/models"
 	"be-file-uploader/internal/models/requests"
+	"be-file-uploader/internal/service/upload"
 	"be-file-uploader/pkg/utils/generate"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/gabriel-vasile/mimetype"
 	"github.com/gofiber/fiber/v3"
 	"github.com/uptrace/bun"
 )
 
 func (s *Service) validateUploadLimits(u *models.User, size int64) error {
-	if size > maxFileSize {
+	if size > upload.MaxFileSize {
 		return fiber.NewError(fiber.StatusRequestEntityTooLarge, "ERR_IMAGE_TOO_LARGE")
 	}
 	if u.UsedStorage+size > u.UploadLimit {
@@ -30,44 +26,16 @@ func (s *Service) validateUploadLimits(u *models.User, size int64) error {
 }
 
 func (s *Service) processImageFile(fh *multipart.FileHeader) ([]byte, string, string, error) {
-	file, err := fh.Open()
+	file, err := s.upload.DetectMultipartFile(fh, upload.MaxFileSize, upload.FileMimeExtensions)
 	if err != nil {
-		return nil, "", "", fiber.NewError(fiber.StatusInternalServerError, "ERR_OPEN_IMAGE")
-	}
-	defer file.Close()
-
-	data, err := s.storage.ReadAll(file)
-	if err != nil {
-		return nil, "", "", fiber.NewError(fiber.StatusInternalServerError, "ERR_FILE_READING")
+		return nil, "", "", err
 	}
 
-	mtype := mimetype.Detect(data)
-	m := mtype.String()
-
-	ext, ok := allowedMime[mtype.String()]
-	if !ok {
-		return nil, "", "", fiber.NewError(fiber.StatusInternalServerError, "ERR_MIMETYPE")
-	}
-
-	return data, m, ext, nil
+	return file.Data, file.MimeType, file.Extension, nil
 }
 
 func (s *Service) generateStorageKey(userID int, imgID, ext string) string {
-	if os.Getenv("APP_MODE") == "DEV" {
-		return path.Join(
-			"images/dev",
-			strconv.FormatInt(int64(userID), 10),
-			time.Now().Format("2006-01"),
-			imgID+ext,
-		)
-	}
-
-	return path.Join(
-		"images",
-		strconv.FormatInt(int64(userID), 10),
-		time.Now().Format("2006-01"),
-		imgID+ext,
-	)
+	return s.upload.GenerateKey("images", userID, imgID, ext, true)
 }
 
 func (s *Service) InitMultipartUpload(ctx context.Context, uploader *models.User, req requests.InitUpload) (*requests.InitUploadResponse, error) {
@@ -75,15 +43,15 @@ func (s *Service) InitMultipartUpload(ctx context.Context, uploader *models.User
 		return nil, err
 	}
 
-	ext, ok := allowedMime[req.MimeType]
+	ext, ok := upload.FileMimeExtensions[req.MimeType]
 	if !ok {
-		return nil, fiber.NewError(fiber.StatusInternalServerError, "ERR_MIMETYPE")
+		return nil, fiber.NewError(fiber.StatusBadRequest, "ERR_MIMETYPE")
 	}
 
 	imageID, _ := generate.FileID()
 	r2Key := s.generateStorageKey(uploader.ID, imageID, ext)
 
-	uploadID, err := s.storage.CreateMultipartUpload(ctx, r2Key, req.MimeType)
+	uploadID, err := s.upload.CreateMultipartUpload(ctx, r2Key, req.MimeType)
 	if err != nil {
 		return nil, err
 	}
@@ -95,18 +63,12 @@ func (s *Service) InitMultipartUpload(ctx context.Context, uploader *models.User
 }
 
 func (s *Service) UploadChunk(ctx context.Context, uploadID, key string, partNumber int32, fh *multipart.FileHeader) (string, error) {
-	file, err := fh.Open()
+	data, err := s.upload.ReadMultipartFile(fh, upload.MaxFileSize)
 	if err != nil {
-		return "", fiber.NewError(fiber.StatusInternalServerError, "ERR_OPEN_IMAGE")
-	}
-	defer file.Close()
-
-	data, err := s.storage.ReadAll(file)
-	if err != nil {
-		return "", fiber.NewError(fiber.StatusInternalServerError, "ERR_FILE_READING")
+		return "", err
 	}
 
-	eTag, err := s.storage.UploadPart(ctx, key, uploadID, partNumber, data)
+	eTag, err := s.upload.UploadPart(ctx, key, uploadID, partNumber, data)
 	if err != nil {
 		return "", fiber.NewError(fiber.StatusInternalServerError, "ERR_UPLOAD_CHUNK")
 	}
@@ -123,7 +85,7 @@ func (s *Service) CompleteMultipartUpload(ctx context.Context, uploader *models.
 		})
 	}
 
-	publicURL, err := s.storage.CompleteMultipartUpload(ctx, req.Key, req.UploadID, s3Parts)
+	publicURL, err := s.upload.CompleteMultipartUpload(ctx, req.Key, req.UploadID, s3Parts)
 	if err != nil {
 		return nil, fiber.NewError(fiber.StatusInternalServerError, "ERR_COMPLETE_MULTIPART")
 	}

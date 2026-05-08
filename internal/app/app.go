@@ -119,6 +119,9 @@ func CreateApp(geo *geo.Service) (app *fiber.App, db *database.Database, err err
 	}))
 
 	storage, err := r2.NewStorage(os.Getenv("R2_ACCESS_KEY"), os.Getenv("R2_SECRET_KEY"), os.Getenv("R2_BUCKET"), os.Getenv("R2_PUBLIC_URL"))
+	if err != nil {
+		return nil, nil, err
+	}
 
 	notifyService := notifySrv.NewService(webDB)
 	notifyHandler := notification.NewHandler(notifyService, webDB)
@@ -126,7 +129,7 @@ func CreateApp(geo *geo.Service) (app *fiber.App, db *database.Database, err err
 	authService := authSrv.NewService(webDB, geo)
 	authHandler := auth.NewHandler(authService)
 
-	userService := userSrv.NewService(webDB, notifyService)
+	userService := userSrv.NewService(webDB, notifyService, storage)
 	userHandler := user.NewHandler(userService, webDB)
 
 	storageService := storageSrv.NewService(webDB, notifyService, storage)

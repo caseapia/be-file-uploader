@@ -34,6 +34,7 @@ type User struct {
 	LastSeen    time.Time              `bun:"last_seen,default:current_timestamp" json:"last_seen"`
 	GeoString   string                 `bun:"geo_string" json:"-"`
 	Geolocation *Geolocation           `bun:"-" json:"geolocation,omitempty"`
+	Avatar      string                 `bun:"avatar" json:"avatar"`
 }
 
 type UserRole struct {

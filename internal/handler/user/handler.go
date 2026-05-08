@@ -130,6 +130,22 @@ func (h *Handler) GenerateAPIToken(ctx fiber.Ctx) error {
 	return validation.Response(ctx, fiber.StatusOK, token)
 }
 
+func (h *Handler) UploadAvatar(ctx fiber.Ctx) error {
+	sender := account.GetUserFromContext(ctx)
+
+	fileHeader, err := ctx.FormFile("avatar")
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "ERR_AVATAR_MISSING")
+	}
+
+	u, err := h.userService.UploadAvatar(ctx.Context(), sender, fileHeader)
+	if err != nil {
+		return err
+	}
+
+	return validation.Response(ctx, fiber.StatusOK, u)
+}
+
 func (h *Handler) ResetUserAPIToken(ctx fiber.Ctx) error {
 	idStr := ctx.Params("id")
 	id, _ := strconv.Atoi(idStr)
