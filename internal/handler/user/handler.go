@@ -181,3 +181,46 @@ func (h *Handler) LookupUsersByPart(ctx fiber.Ctx) error {
 
 	return validation.Response(ctx, fiber.StatusOK, users)
 }
+
+func (h *Handler) RestrictUser(ctx fiber.Ctx) error {
+	sender := account.GetUserFromContext(ctx)
+	var req requests.RestrictUser
+	if err := validation.ParseAndValidate(ctx, &req); err != nil {
+		return err
+	}
+
+	ban, err := h.userService.BanUser(ctx.Context(), sender, req)
+	if err != nil {
+		return err
+	}
+
+	return validation.Response(ctx, fiber.StatusCreated, ban)
+}
+
+func (h *Handler) LookupUserRestrictions(ctx fiber.Ctx) error {
+	idStr := ctx.Params("id")
+	id, _ := strconv.Atoi(idStr)
+
+	bans, err := h.repo.LookupUserBans(ctx.Context(), id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fiber.NewError(fiber.StatusNotFound, "ERR_BANS_NOTFOUND")
+		}
+		return err
+	}
+
+	return validation.Response(ctx, fiber.StatusOK, bans)
+}
+
+func (h *Handler) RemoveUserRestriction(ctx fiber.Ctx) error {
+	sender := account.GetUserFromContext(ctx)
+	idStr := ctx.Params("id")
+	id, _ := strconv.Atoi(idStr)
+
+	updatedUser, err := h.userService.UnbanUser(ctx.Context(), sender, id)
+	if err != nil {
+		return err
+	}
+
+	return validation.Response(ctx, fiber.StatusOK, updatedUser)
+}

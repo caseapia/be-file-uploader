@@ -14,7 +14,7 @@ func (h *Handler) RegisterPublicRoutes(router fiber.Router) {
 }
 
 func (h *Handler) RegisterPrivateRoutes(router fiber.Router) {
-	admin := router.Group("/roadmap/admin")
+	admin := router.Group("/roadmap/admin", middleware.Require([]string{"not_banned"}))
 
 	admin.Post("/task/add", middleware.RequirePermission(role.Developer), h.AddRoadmapTask)
 	admin.Patch("/task/edit", middleware.RequirePermission(role.Developer), h.EditRoadmapTask)

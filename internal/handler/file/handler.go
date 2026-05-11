@@ -7,6 +7,7 @@ import (
 	"be-file-uploader/internal/repository/mysql"
 	"be-file-uploader/internal/service/file"
 	"be-file-uploader/internal/service/user"
+	userEnum "be-file-uploader/pkg/enums/user"
 	"be-file-uploader/pkg/utils/account"
 	"be-file-uploader/pkg/utils/validation"
 
@@ -238,6 +239,10 @@ func (h *Handler) ShareXUpload(ctx fiber.Ctx) error {
 	u, err := h.userService.AuthByToken(ctx.Context(), token)
 	if err != nil {
 		return err
+	}
+
+	if u.ActiveRestriction != nil && (u.ActiveRestriction.Type == userEnum.BanTypeUpload || u.ActiveRestriction.Type == userEnum.BanTypeAccount) {
+		return fiber.NewError(fiber.StatusUnauthorized, "ERR_USER_RESTRICTED")
 	}
 
 	fileHeader, err := ctx.FormFile("image")

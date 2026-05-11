@@ -9,6 +9,7 @@ import (
 	"be-file-uploader/internal/models"
 	"be-file-uploader/internal/repository/mysql"
 	"be-file-uploader/internal/service/auth"
+	userRelation "be-file-uploader/pkg/enums/user"
 	"be-file-uploader/pkg/geo"
 
 	"github.com/gofiber/fiber/v3"
@@ -60,27 +61,15 @@ func Middleware(auth *auth.Service, geo *geo.Service, repo *mysql.Repository) fi
 			return fiber.NewError(fiber.StatusUnauthorized, "ERR_TOKEN_NOTFOUND")
 		}
 
-		ip := ctx.Get("CF-Connecting-IP")
-		useragent := ctx.Get("X-User-Agent")
-		rayid := ctx.Get("Cf-Ray")
-		locale := ctx.Get("X-Locale")
-		code, country, city := geo.GetGeoString(ip)
-
 		user, claims, err := auth.ParseJWT(token)
 		if err != nil {
 			return err
 		}
 
-		user.LastIP = ip
-		user.Useragent = useragent
-		user.CFRayID = rayid
-		user.Locale = locale
-		user.LastSeen = time.Now()
-		user.GeoString = fmt.Sprintf("%s, %s", country, city)
-		user.Geolocation = &models.Geolocation{
-			CountryCode: code,
-			City:        city,
-			Country:     country,
+		enrichUserMeta(ctx, user, geo)
+
+		if err := processExpiredBan(ctx.Context(), user, repo); err != nil {
+			return err
 		}
 
 		_, err = repo.UpdateUser(ctx.Context(), repo.DB, user, "last_ip", "useragent", "cf_ray_id", "locale", "last_seen", "geo_string")
@@ -88,12 +77,8 @@ func Middleware(auth *auth.Service, geo *geo.Service, repo *mysql.Repository) fi
 			return fiber.NewError(fiber.StatusInternalServerError, "ERR_DATABASE_UPDATE")
 		}
 
-		session, err := repo.SearchSessionByID(ctx, claims.SessionID)
-		if err != nil || session == nil {
-			return fiber.NewError(fiber.StatusUnauthorized, "ERR_SESSION_NOTFOUND")
-		}
-
-		if err := ValidateSession(repo, session); err != nil {
+		session, err := getAndValidateSession(ctx.Context(), repo, claims.SessionID)
+		if err != nil {
 			return err
 		}
 
@@ -102,6 +87,58 @@ func Middleware(auth *auth.Service, geo *geo.Service, repo *mysql.Repository) fi
 
 		return ctx.Next()
 	}
+}
+
+func enrichUserMeta(ctx fiber.Ctx, user *models.User, geo *geo.Service) {
+	ip := ctx.Get("CF-Connecting-IP")
+	code, country, city := geo.GetGeoString(ip)
+
+	user.LastIP = ip
+	user.Useragent = ctx.Get("X-User-Agent")
+	user.CFRayID = ctx.Get("Cf-Ray")
+	user.Locale = ctx.Get("X-Locale")
+	user.LastSeen = time.Now()
+	user.GeoString = fmt.Sprintf("%s, %s", country, city)
+	user.Geolocation = &models.Geolocation{
+		CountryCode: code,
+		City:        city,
+		Country:     country,
+	}
+}
+
+func processExpiredBan(ctx context.Context, user *models.User, repo *mysql.Repository) error {
+	if user.ActiveRestriction == nil || user.ActiveRestriction.UnbanAt == nil {
+		return nil
+	}
+
+	if time.Now().Before(*user.ActiveRestriction.UnbanAt) {
+		return nil
+	}
+
+	expiredBanID := *user.ActiveRestrictionID
+
+	err := repo.RemoveBan(ctx, repo.DB, expiredBanID, userRelation.BanStatusExpired, nil)
+	if err != nil {
+		return err
+	}
+
+	user.ActiveRestrictionID = nil
+	user.ActiveRestriction = nil
+
+	return nil
+}
+
+func getAndValidateSession(ctx context.Context, repo *mysql.Repository, sessionID string) (*models.Session, error) {
+	session, err := repo.SearchSessionByID(ctx, sessionID)
+	if err != nil || session == nil {
+		return nil, fiber.NewError(fiber.StatusUnauthorized, "ERR_SESSION_NOTFOUND")
+	}
+
+	if err := ValidateSession(repo, session); err != nil {
+		return nil, err
+	}
+
+	return session, nil
 }
 
 func extractToken(ctx fiber.Ctx) string {

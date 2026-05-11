@@ -8,7 +8,7 @@ import (
 )
 
 func (h *Handler) RegisterPrivateRoutes(router fiber.Router) {
-	groupAdmin := router.Group("/roles/admin")
+	groupAdmin := router.Group("/roles/admin", middleware.Require([]string{"not_banned"}))
 
 	groupAdmin.Get("/all", middleware.RequirePermission(role.ManageRoles), h.LookupAllRoles)
 	groupAdmin.Post("/create", middleware.RequirePermission(role.ManageRoles), h.CreateRole)

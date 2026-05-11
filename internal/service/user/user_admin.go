@@ -1,25 +1,30 @@
 package user
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"be-file-uploader/internal/models"
+	"be-file-uploader/internal/models/relations"
+	"be-file-uploader/internal/models/requests"
 	role2 "be-file-uploader/pkg/enums/role"
+	userRelation "be-file-uploader/pkg/enums/user"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gookit/slog"
 	"github.com/uptrace/bun"
 )
 
-func (s *Service) searchAction(ctx fiber.Ctx, userID, roleID int) (user *models.User, role *models.Role, err error) {
-	user, err = s.repo.LookupUserByID(ctx.Context(), userID)
+func (s *Service) searchAction(ctx context.Context, userID, roleID int) (user *models.User, role *models.Role, err error) {
+	user, err = s.repo.LookupUserByID(ctx, userID)
 	if err != nil {
 		return nil, nil, fiber.NewError(fiber.StatusNotFound, "ERR_USER_NOTFOUND")
 	}
 
-	role, err = s.repo.LookupRoleByID(ctx.Context(), roleID)
+	role, err = s.repo.LookupRoleByID(ctx, roleID)
 	if err != nil {
 		return nil, nil, fiber.NewError(fiber.StatusNotFound, "ERR_ROLE_NOTFOUND"+err.Error())
 	}
@@ -159,6 +164,117 @@ func (s *Service) ResetUserAPIToken(ctx fiber.Ctx, userID int) (user *models.Use
 	s.notify.CreateNotification(ctx.Context(), user.ID, "NOTIFY_API_TOKEN_RESET")
 
 	user, err = s.repo.UpdateUser(ctx.Context(), s.repo.DB, user, "sharex_token")
+
+	return user, nil
+}
+
+func (s *Service) BanUser(ctx context.Context, sender *models.User, req requests.RestrictUser) (ban *models.Restriction, err error) {
+	user, err := s.repo.LookupUserByID(ctx, req.User)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fiber.NewError(fiber.StatusNotFound, "ERR_USER_NOTFOUND")
+		}
+		return nil, err
+	}
+
+	now := time.Now()
+	ban = &models.Restriction{
+		UserID:      user.ID,
+		ModeratorID: sender.ID,
+		User: &relations.User{
+			ID:       user.ID,
+			Username: user.Username,
+			Avatar:   user.Avatar,
+		},
+		Moderator: &relations.User{
+			ID:       sender.ID,
+			Username: sender.Username,
+			Avatar:   sender.Avatar,
+		},
+		Reason:    req.Reason,
+		UnbanAt:   &req.UnbanAt,
+		CreatedAt: &now,
+		Status:    userRelation.BanStatusBanned,
+		Type:      req.Type,
+	}
+
+	if user.HasPermission(role2.Admin) && !sender.HasPermission(role2.Admin) {
+		return nil, fiber.NewError(fiber.StatusForbidden, "ERR_BAN_ISSUE_FORBIDDEN")
+	}
+	if user.ActiveRestrictionID != nil {
+		return nil, fiber.NewError(fiber.StatusConflict, "ERR_BAN_ACTIVE_BAN")
+	}
+
+	err = s.repo.WithTx(ctx, func(tx bun.Tx) (err error) {
+		ban, err := s.repo.AddBan(ctx, tx, *ban)
+		if err != nil {
+			slog.WithData(slog.M{
+				"banModel": ban,
+				"err":      err.Error(),
+			}).Error("Failed to add ban")
+			return fiber.NewError(fiber.StatusInternalServerError, "ERR_ADD_BAN")
+		}
+
+		user.ActiveRestrictionID = ban.ID
+
+		user, err = s.repo.UpdateUser(ctx, tx, user, "active_restriction")
+		if err != nil {
+			slog.WithData(slog.M{
+				"banModel": ban,
+				"err":      err.Error(),
+				"user":     user,
+			}).Error("Failed to update user")
+			return fiber.NewError(fiber.StatusInternalServerError, "ERR_UPDATE_USER")
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return ban, nil
+}
+
+func (s *Service) UnbanUser(ctx context.Context, sender *models.User, id int) (user *models.User, err error) {
+	user, err = s.repo.LookupUserByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fiber.NewError(fiber.StatusNotFound, "ERR_USER_NOTFOUND")
+		}
+		return nil, err
+	}
+	if user.ActiveRestrictionID == nil {
+		return nil, fiber.NewError(fiber.StatusConflict, "ERR_USER_NOTBANNED")
+	}
+
+	err = s.repo.WithTx(ctx, func(tx bun.Tx) (err error) {
+		err = s.repo.RemoveBan(ctx, tx, *user.ActiveRestrictionID, userRelation.BanStatusUnbannedByAdmin, &sender.ID)
+		if err != nil {
+			slog.WithData(slog.M{
+				"banModel": user,
+				"err":      err.Error(),
+				"user":     user,
+			}).Error("Failed to remove ban")
+			return fiber.NewError(fiber.StatusInternalServerError, "ERR_DELETE_BAN")
+		}
+
+		user.ActiveRestrictionID = nil
+
+		user, err = s.repo.UpdateUser(ctx, tx, user, "active_restriction")
+		if err != nil {
+			slog.WithData(slog.M{
+				"banModel": user,
+				"err":      err.Error(),
+				"user":     user,
+			}).Error("Failed to update user")
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
 
 	return user, nil
 }

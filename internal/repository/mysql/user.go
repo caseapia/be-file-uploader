@@ -2,10 +2,13 @@ package mysql
 
 import (
 	"context"
+	"time"
 
 	"be-file-uploader/internal/models"
 	"be-file-uploader/internal/models/relations"
+	userRelation "be-file-uploader/pkg/enums/user"
 
+	"github.com/gofiber/fiber/v3"
 	"github.com/uptrace/bun"
 )
 
@@ -22,6 +25,8 @@ func (r *Repository) LookupUserByName(ctx context.Context, name string) (*models
 		Relation("Albums").
 		Relation("Albums.CreatedBy").
 		Relation("Albums.Items").
+		Relation("ActiveRestriction").
+		Relation("ActiveRestriction.Moderator").
 		Limit(1).
 		Scan(ctx)
 	return user, err
@@ -33,6 +38,8 @@ func (r *Repository) LookupUserByPartOfName(ctx context.Context, name string) ([
 	err := r.DB.NewSelect().
 		Model(&users).
 		Where("username LIKE ?", "%"+name+"%").
+		Relation("ActiveRestriction").
+		Relation("ActiveRestriction.Moderator").
 		Scan(ctx)
 	return users, err
 }
@@ -50,6 +57,8 @@ func (r *Repository) LookupUserByID(ctx context.Context, id int) (*models.User, 
 		Relation("Albums").
 		Relation("Albums.CreatedBy").
 		Relation("Albums.Items").
+		Relation("ActiveRestriction").
+		Relation("ActiveRestriction.Moderator").
 		Limit(1).
 		Scan(ctx)
 
@@ -62,6 +71,7 @@ func (r *Repository) LookupUsers(ctx context.Context, limit int) ([]models.User,
 	err := r.DB.NewSelect().
 		Model(&users).
 		Relation("Roles").
+		Relation("ActiveRestriction").
 		Limit(limit).
 		Scan(ctx)
 	return users, err
@@ -125,4 +135,39 @@ func (r *Repository) LookupUserByToken(ctx context.Context, token string) (*mode
 		Scan(ctx)
 
 	return user, err
+}
+
+func (r *Repository) AddBan(ctx context.Context, tx bun.IDB, ban models.Restriction) (models.Restriction, error) {
+	_, err := tx.NewInsert().
+		Model(&ban).
+		Exec(ctx)
+	return ban, err
+}
+
+func (r *Repository) RemoveBan(ctx context.Context, tx bun.IDB, banID int, status userRelation.BanStatus, unbannedBy *int) error {
+	ban := new(models.Restriction)
+
+	if status == userRelation.BanStatusUnbannedByAdmin && unbannedBy == nil {
+		return fiber.NewError(fiber.StatusNotFound, "ERR_ADMIN_NOTFOUND")
+	}
+
+	_, err := tx.NewUpdate().
+		Model(ban).
+		Where("id = ?", banID).
+		Set("status = ?", status).
+		Set("unbanned_by = ?", unbannedBy).
+		Set("unban_at = ?", time.Now()).
+		Exec(ctx)
+	return err
+}
+
+func (r *Repository) LookupUserBans(ctx context.Context, user int) ([]models.Restriction, error) {
+	bans := make([]models.Restriction, 0)
+
+	err := r.DB.NewSelect().
+		Model(&bans).
+		Where("user_id = ?", user).
+		Relation("Moderator").
+		Scan(ctx)
+	return bans, err
 }

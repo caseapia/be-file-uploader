@@ -11,30 +11,32 @@ import (
 type User struct {
 	bun.BaseModel `bun:"table:users,alias:u"`
 
-	ID          int                    `bun:"id,pk,autoincrement,unique" json:"id"`
-	Username    string                 `bun:"username,unique" json:"username"`
-	DiscordUID  *int                   `bun:"discord_uid,unique" json:"discord_uid"`
-	DiscordName *string                `bun:"discord_name" json:"discord_name"`
-	Password    string                 `bun:"password" json:"-"`
-	CreatedAt   time.Time              `bun:"created_at,default:current_timestamp" json:"created_at"`
-	UpdatedAt   time.Time              `bun:"updated_at,nullzero" json:"updated_at"`
-	Roles       []Role                 `bun:"m2m:user_roles,join:User=Role" json:"roles"`
-	RegisterIP  string                 `bun:"register_ip" json:"-"`
-	LastIP      string                 `bun:"last_ip" json:"-"`
-	Useragent   string                 `bun:"useragent" json:"-"`
-	Private     map[string]interface{} `bun:"-" json:"private,omitempty"`
-	Storage     []File                 `bun:"rel:has-many,join:id=uploaded_by" json:"storage"`
-	UploadLimit int64                  `bun:"upload_limit,default:1073741824" json:"upload_limit"`
-	UsedStorage int64                  `bun:"used_storage,default:0" json:"used_storage"`
-	IsVerified  bool                   `bun:"is_verified,default:false" json:"is_verified"`
-	CFRayID     string                 `bun:"cf_ray_id" json:"-"`
-	Albums      []Album                `bun:"rel:has-many,join:id=created_by" json:"albums"`
-	Locale      string                 `bun:"locale" json:"-"`
-	ShareXToken *string                `bun:"sharex_token" json:"-"`
-	LastSeen    time.Time              `bun:"last_seen,default:current_timestamp" json:"last_seen"`
-	GeoString   string                 `bun:"geo_string" json:"-"`
-	Geolocation *Geolocation           `bun:"-" json:"geolocation,omitempty"`
-	Avatar      string                 `bun:"avatar" json:"avatar"`
+	ID                  int                    `bun:"id,pk,autoincrement,unique" json:"id"`
+	Username            string                 `bun:"username,unique" json:"username"`
+	DiscordUID          *int                   `bun:"discord_uid,unique" json:"discord_uid"`
+	DiscordName         *string                `bun:"discord_name" json:"discord_name"`
+	Password            string                 `bun:"password" json:"-"`
+	CreatedAt           time.Time              `bun:"created_at,default:current_timestamp" json:"created_at"`
+	UpdatedAt           time.Time              `bun:"updated_at,nullzero" json:"updated_at"`
+	Roles               []Role                 `bun:"m2m:user_roles,join:User=Role" json:"roles"`
+	RegisterIP          string                 `bun:"register_ip" json:"-"`
+	LastIP              string                 `bun:"last_ip" json:"-"`
+	Useragent           string                 `bun:"useragent" json:"-"`
+	Private             map[string]interface{} `bun:"-" json:"private,omitempty"`
+	Storage             []File                 `bun:"rel:has-many,join:id=uploaded_by" json:"storage"`
+	UploadLimit         int64                  `bun:"upload_limit,default:1073741824" json:"upload_limit"`
+	UsedStorage         int64                  `bun:"used_storage,default:0" json:"used_storage"`
+	IsVerified          bool                   `bun:"is_verified,default:false" json:"is_verified"`
+	CFRayID             string                 `bun:"cf_ray_id" json:"-"`
+	Albums              []Album                `bun:"rel:has-many,join:id=created_by" json:"albums"`
+	Locale              string                 `bun:"locale" json:"-"`
+	ShareXToken         *string                `bun:"sharex_token" json:"-"`
+	LastSeen            time.Time              `bun:"last_seen,default:current_timestamp" json:"last_seen"`
+	GeoString           string                 `bun:"geo_string" json:"-"`
+	Geolocation         *Geolocation           `bun:"-" json:"geolocation,omitempty"`
+	Avatar              string                 `bun:"avatar" json:"avatar"`
+	ActiveRestrictionID *int                   `bun:"active_restriction" json:"-"`
+	ActiveRestriction   *Restriction           `bun:"rel:belongs-to,join:active_restriction=id" json:"active_restriction,omitempty"`
 }
 
 type UserRole struct {
