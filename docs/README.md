@@ -17,7 +17,7 @@ This folder contains developer-facing and contributor-facing documentation for `
 | [authentication.md](authentication.md)                                             | JWT + refresh-token flow, session lifecycle, middleware behavior, and ShareX token auth        |
 | [errors.md](errors.md)                                                             | Response envelopes, validation behavior, and current error catalog by feature area             |
 | [architecture.md](architecture.md)                                                 | Project structure, request flow, persistence model, permission model, and implementation caveats |
-| [insomnia/be-file-uploader.insomnia.json](insomnia/be-file-uploader.insomnia.json) | Importable Insomnia collection aligned with current routes                                      |
+| [insomnia/be-file-uploader.insomnia.json](insomnia (outdated)/be-file-uploader.insomnia.json) | Importable Insomnia collection aligned with current routes                                      |
 
 ## What This Service Does
 

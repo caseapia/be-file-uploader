@@ -18,10 +18,6 @@ Most successful JSON responses are wrapped in top-level `response`.
 }
 ```
 
-Exception:
-
-- `POST /public/storage/upload/sharex` returns `{ "url": "..." }` directly.
-
 ### Error Envelopes
 
 Handled application errors:
@@ -47,7 +43,7 @@ Unhandled internal errors:
 - Public routes live under `/public`.
 - Private routes live under `/private`.
 - Private routes require an access token:
-  - `Authorization: Bearer <jwt>`, or
+  - `Authorization: Bearer <jwt>`, **or**
   - `Cookie: access_token=<jwt>`
 
 ### Frontend Headers
@@ -92,6 +88,18 @@ For multipart routes (`/upload/chunk`, `/upload/sharex`) use `multipart/form-dat
     "country_code": "US",
     "country": "United States",
     "city": "New York"
+  },
+  "avatar": "",
+  "active_restriction": {
+    "id": 0,
+    "moderator": {
+      "id": 1,
+      "username": "admin"
+    },
+    "created_at": "2026-04-11T12:00:00Z",
+    "reason": "Violation of rules",
+    "status": "active",
+    "type": "account"
   }
 }
 ```
@@ -119,7 +127,33 @@ Notes:
   "comments": [],
   "likes": [],
   "downloads": 0,
-  "created_at": "2026-04-11T12:00:00Z"
+  "created_at": "2026-04-11T12:00:00Z",
+  "grants": [
+    {
+      "id": 0,
+      "user": {
+        "id": 2,
+        "username": "alice"
+      },
+      "granted_by_user": {
+        "id": 2,
+        "username": "alice"
+      },
+      "is_owner": true
+    },
+    {
+      "id": 1,
+      "user": {
+        "id": 3,
+        "username": "admin"
+      },
+      "granted_by_user": {
+        "id": 2,
+        "username": "alice"
+      },
+      "is_owner": false
+    }
+  ]
 }
 ```
 
@@ -127,6 +161,22 @@ Notes:
 
 - `r2_key` and `uploaded_by` are hidden from JSON.
 - Depending on current visibility logic, `url` may be blank even when metadata is returned.
+
+### File Grants
+```json
+{
+  "id": 0,
+  "user": {
+    "id": 2,
+    "username": "alice"
+  },
+  "granted_by_user": {
+    "id": 2,
+    "username": "alice"
+  },
+  "is_owner": true
+}
+```
 
 ### Album
 
@@ -429,6 +479,23 @@ All routes below require:
 
 - valid access token
 - `UPLOAD_FILES`
+
+### `POST /private/user/admin/restriction`
+
+Request body:
+
+```json
+{
+  "user": "1",
+  "unban_at": "2026-04-11T12:00:00Z",
+  "type": "account",
+  "reason": "Rules violation"
+}
+```
+
+Validation:
+- Field `unban_at` **is not required**. If this field is empty, you will issue a permanent ban
+- Field `type` requires one of the values you want to restrict - `account, likes, comments, uploading`
 
 ### `POST /private/storage/upload/init`
 
@@ -887,52 +954,55 @@ Response `200`.
 
 ## Route Matrix
 
-| Method   | Path                                              | Auth         | Permission                |
-|----------|---------------------------------------------------|--------------|---------------------------|
-| `GET`    | `/v1/api/public/ping`                             | no           | no                        |
-| `POST`   | `/v1/api/public/auth/register`                    | no           | no                        |
-| `POST`   | `/v1/api/public/auth/login`                       | no           | no                        |
-| `POST`   | `/v1/api/public/auth/refresh`                     | no           | no                        |
-| `GET`    | `/v1/api/public/roadmap/list`                     | no           | no                        |
-| `POST`   | `/v1/api/public/storage/upload/sharex`            | ShareX token | no role check             |
-| `DELETE` | `/v1/api/private/auth/logout`                     | yes          | no                        |
-| `GET`    | `/v1/api/private/user/me`                         | yes          | no                        |
-| `GET`    | `/v1/api/private/user/lookup/:id`                 | yes          | `VIEW_OTHER_PROFILES`     |
-| `GET`    | `/v1/api/private/user/shareX/generate`            | yes          | `UPLOAD_FILES`            |
-| `GET`    | `/v1/api/private/user/admin/users`                | yes          | `MANAGE_USERS`            |
-| `PUT`    | `/v1/api/private/user/admin/role/add`             | yes          | `MANAGE_USERS`            |
-| `DELETE` | `/v1/api/private/user/admin/role/delete`          | yes          | `MANAGE_USERS`            |
-| `PATCH`  | `/v1/api/private/user/admin/storage-limit/update` | yes          | `MANAGE_USERS`            |
-| `PATCH`  | `/v1/api/private/user/admin/verify/:id`           | yes          | `MANAGE_USERS`            |
-| `DELETE` | `/v1/api/private/user/admin/shareX/reset/:id`     | yes          | `MANAGE_USERS`            |
-| `POST`   | `/v1/api/private/storage/upload/init`             | yes          | `UPLOAD_FILES`            |
-| `POST`   | `/v1/api/private/storage/upload/chunk`            | yes          | `UPLOAD_FILES`            |
-| `POST`   | `/v1/api/private/storage/upload/complete`         | yes          | `UPLOAD_FILES`            |
-| `DELETE` | `/v1/api/private/storage/action/delete`           | yes          | `UPLOAD_FILES`            |
-| `GET`    | `/v1/api/private/storage/my`                      | yes          | `VIEW_OWN_FILES`          |
-| `GET`    | `/v1/api/private/storage/list`                    | yes          | `VIEW_OTHER_FILES`        |
-| `GET`    | `/v1/api/private/storage/list/:id`                | yes          | `VIEW_OTHER_FILES`        |
-| `PUT`    | `/v1/api/private/storage/action/album/put`        | yes          | `UPLOAD_FILES`            |
-| `DELETE` | `/v1/api/private/storage/action/album/delete`     | yes          | `UPLOAD_FILES`            |
-| `PATCH`  | `/v1/api/private/storage/action/like/:id`         | yes          | `VIEW_OTHER_FILES`        |
-| `DELETE` | `/v1/api/private/storage/action/likeRemove/:id`   | yes          | `VIEW_OTHER_FILES`        |
-| `GET`    | `/v1/api/private/storage/action/download/:id`     | yes          | `DOWNLOAD_OTHERS_FILES`   |
-| `POST`   | `/v1/api/private/storage/action/addComment`       | yes          | `VIEW_OTHER_FILES`        |
-| `PUT`    | `/v1/api/private/storage/action/access/grant`     | yes          | no                        |
-| `DELETE` | `v1/api/private/storage/action/access/remove`     | yes          | no                        |
-| `GET`    | `/v1/api/private/storage/post/:id`                | yes          | `VIEW_OTHER_FILES`        |
-| `POST`   | `/v1/api/private/album/action/create`             | yes          | `UPLOAD_FILES`            |
-| `DELETE` | `/v1/api/private/album/action/delete/:id`         | yes          | `UPLOAD_FILES`            |
-| `GET`    | `/v1/api/private/album/lookup/:id`                | yes          | `VIEW_OWN_FILES`          |
-| `GET`    | `/v1/api/private/album/lookupAll`                 | yes          | `MANAGE_FILES`            |
-| `GET`    | `/v1/api/private/roles/admin/all`                 | yes          | `MANAGE_ROLES`            |
-| `POST`   | `/v1/api/private/roles/admin/create`              | yes          | `MANAGE_ROLES`            |
-| `PATCH`  | `/v1/api/private/roles/admin/edit`                | yes          | `MANAGE_ROLES`            |
-| `DELETE` | `/v1/api/private/roles/admin/delete`              | yes          | `MANAGE_ROLES`            |
-| `GET`    | `/v1/api/private/notifications/my`                | yes          | no route-level permission |
-| `PATCH`  | `/v1/api/private/notifications/action/read/:id`   | yes          | no route-level permission |
-| `POST`   | `/v1/api/private/roadmap/admin/task/add`          | yes          | `DEVELOPER`               |
-| `PATCH`  | `/v1/api/private/roadmap/admin/task/edit`         | yes          | `DEVELOPER`               |
+| Method   | Path                                                | Auth         | Permission                |
+|----------|-----------------------------------------------------|--------------|---------------------------|
+| `GET`    | `/v1/api/public/ping`                               | no           | no                        |
+| `POST`   | `/v1/api/public/auth/register`                      | no           | no                        |
+| `POST`   | `/v1/api/public/auth/login`                         | no           | no                        |
+| `POST`   | `/v1/api/public/auth/refresh`                       | no           | no                        |
+| `GET`    | `/v1/api/public/roadmap/list`                       | no           | no                        |
+| `POST`   | `/v1/api/public/storage/upload/sharex`              | ShareX token | no role check             |
+| `DELETE` | `/v1/api/private/auth/logout`                       | yes          | no                        |
+| `GET`    | `/v1/api/private/user/me`                           | yes          | no                        |
+| `GET`    | `/v1/api/private/user/lookup/:id`                   | yes          | `VIEW_OTHER_PROFILES`     |
+| `GET`    | `/v1/api/private/user/shareX/generate`              | yes          | `UPLOAD_FILES`            |
+| `GET`    | `/v1/api/private/user/admin/users`                  | yes          | `MANAGE_USERS`            |
+| `PUT`    | `/v1/api/private/user/admin/role/add`               | yes          | `MANAGE_USERS`            |
+| `DELETE` | `/v1/api/private/user/admin/role/delete`            | yes          | `MANAGE_USERS`            |
+| `PATCH`  | `/v1/api/private/user/admin/storage-limit/update`   | yes          | `MANAGE_USERS`            |
+| `PATCH`  | `/v1/api/private/user/admin/verify/:id`             | yes          | `MANAGE_USERS`            |
+| `DELETE` | `/v1/api/private/user/admin/shareX/reset/:id`       | yes          | `MANAGE_USERS`            |
+| `POST`   | `/v1/api/private/user/admin/restriction`            | yes          | `MANAGE_USERS`            |
+| `GET`    | `/v1/api/private/user/admin/restrictions/list/:id`  | yes          | `MANAGE_USERS`            |
+| `DELETE` | `/v1/api/private/user/admin/restriction/delete/:id` | yes          | `MANAGE_USERS`            |
+| `POST`   | `/v1/api/private/storage/upload/init`               | yes          | `UPLOAD_FILES`            |
+| `POST`   | `/v1/api/private/storage/upload/chunk`              | yes          | `UPLOAD_FILES`            |
+| `POST`   | `/v1/api/private/storage/upload/complete`           | yes          | `UPLOAD_FILES`            |
+| `DELETE` | `/v1/api/private/storage/action/delete`             | yes          | `UPLOAD_FILES`            |
+| `GET`    | `/v1/api/private/storage/my`                        | yes          | `VIEW_OWN_FILES`          |
+| `GET`    | `/v1/api/private/storage/list`                      | yes          | `VIEW_OTHER_FILES`        |
+| `GET`    | `/v1/api/private/storage/list/:id`                  | yes          | `VIEW_OTHER_FILES`        |
+| `PUT`    | `/v1/api/private/storage/action/album/put`          | yes          | `UPLOAD_FILES`            |
+| `DELETE` | `/v1/api/private/storage/action/album/delete`       | yes          | `UPLOAD_FILES`            |
+| `PATCH`  | `/v1/api/private/storage/action/like/:id`           | yes          | `VIEW_OTHER_FILES`        |
+| `DELETE` | `/v1/api/private/storage/action/likeRemove/:id`     | yes          | `VIEW_OTHER_FILES`        |
+| `GET`    | `/v1/api/private/storage/action/download/:id`       | yes          | `DOWNLOAD_OTHERS_FILES`   |
+| `POST`   | `/v1/api/private/storage/action/addComment`         | yes          | `VIEW_OTHER_FILES`        |
+| `PUT`    | `/v1/api/private/storage/action/access/grant`       | yes          | no                        |
+| `DELETE` | `v1/api/private/storage/action/access/remove`       | yes          | no                        |
+| `GET`    | `/v1/api/private/storage/post/:id`                  | yes          | `VIEW_OTHER_FILES`        |
+| `POST`   | `/v1/api/private/album/action/create`               | yes          | `UPLOAD_FILES`            |
+| `DELETE` | `/v1/api/private/album/action/delete/:id`           | yes          | `UPLOAD_FILES`            |
+| `GET`    | `/v1/api/private/album/lookup/:id`                  | yes          | `VIEW_OWN_FILES`          |
+| `GET`    | `/v1/api/private/album/lookupAll`                   | yes          | `MANAGE_FILES`            |
+| `GET`    | `/v1/api/private/roles/admin/all`                   | yes          | `MANAGE_ROLES`            |
+| `POST`   | `/v1/api/private/roles/admin/create`                | yes          | `MANAGE_ROLES`            |
+| `PATCH`  | `/v1/api/private/roles/admin/edit`                  | yes          | `MANAGE_ROLES`            |
+| `DELETE` | `/v1/api/private/roles/admin/delete`                | yes          | `MANAGE_ROLES`            |
+| `GET`    | `/v1/api/private/notifications/my`                  | yes          | no route-level permission |
+| `PATCH`  | `/v1/api/private/notifications/action/read/:id`     | yes          | no route-level permission |
+| `POST`   | `/v1/api/private/roadmap/admin/task/add`            | yes          | `DEVELOPER`               |
+| `PATCH`  | `/v1/api/private/roadmap/admin/task/edit`           | yes          | `DEVELOPER`               |
 
 ## Implementation Caveats
 

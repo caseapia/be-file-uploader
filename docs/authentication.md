@@ -12,12 +12,12 @@ The API uses a two-token model backed by a persistent session row:
 
 Current access-token properties:
 
-| Property      | Value |
-|---------------|-------|
-| Algorithm     | `HS256` |
+| Property      | Value                             |
+|---------------|-----------------------------------|
+| Algorithm     | `HS256`                           |
 | Secret source | `JWT_SECRET` (`models.JWTSecret`) |
-| Lifetime      | `7 days` |
-| Claims        | `sub`, `sid`, `tv`, `iat`, `exp` |
+| Lifetime      | `7 days`                          |
+| Claims        | `sub`, `sid`, `tv`, `iat`, `exp`  |
 
 Meaning of claims:
 
@@ -29,12 +29,12 @@ Meaning of claims:
 
 Current refresh-token properties:
 
-| Property | Value |
-| --- | --- |
-| Random bytes | `32` |
-| Encoding | Base64 URL with padding |
-| Typical length | `44` chars |
-| DB storage | SHA-256 hash only |
+| Property            | Value                      |
+|---------------------|----------------------------|
+| Random bytes        | `32`                       |
+| Encoding            | Base64 URL with padding    |
+| Typical length      | `44` chars                 |
+| DB storage          | SHA-256 hash only          |
 | Session TTL refresh | yes, on successful refresh |
 
 ## Session Lifecycle

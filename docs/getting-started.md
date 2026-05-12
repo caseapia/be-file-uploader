@@ -179,7 +179,7 @@ To change CORS rules, edit [`internal/app/app.go`](../internal/app/app.go).
 4. Ensure role ID `1` exists for registration.
 5. Ensure object-storage vars are valid if testing `/private/storage/*` or `/public/storage/upload/sharex`.
 6. Start the server.
-7. Import [`docs/insomnia/be-file-uploader.insomnia.json`](insomnia/be-file-uploader.insomnia.json) or use [api-reference.md](api-reference.md).
+7. Import [`docs/insomnia/be-file-uploader.insomnia.json`](insomnia (outdated)/be-file-uploader.insomnia.json) or use [api-reference.md](api-reference.md).
 8. Register, log in, then use the returned access token for private routes.
 
 ## Database / Seed Expectations
