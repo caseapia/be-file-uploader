@@ -14,6 +14,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gookit/slog"
+	"github.com/uptrace/bun"
 )
 
 func ValidateSession(r *mysql.Repository, session *models.Session) error {
@@ -117,13 +118,22 @@ func processExpiredBan(ctx context.Context, user *models.User, repo *mysql.Repos
 
 	expiredBanID := *user.ActiveRestrictionID
 
-	err := repo.RemoveBan(ctx, repo.DB, expiredBanID, userRelation.BanStatusExpired, nil)
+	err := repo.WithTx(ctx, func(tx bun.Tx) error {
+		err := repo.RemoveBan(ctx, tx, expiredBanID, userRelation.BanStatusExpired, nil)
+		if err != nil {
+			return err
+		}
+
+		user.ActiveRestrictionID = nil
+		user.ActiveRestriction = nil
+
+		_, err = repo.UpdateUser(ctx, tx, user, "active_restriction")
+
+		return nil
+	})
 	if err != nil {
 		return err
 	}
-
-	user.ActiveRestrictionID = nil
-	user.ActiveRestriction = nil
 
 	return nil
 }
