@@ -216,10 +216,6 @@ func (s *Service) DownloadFile(ctx fiber.Ctx, sender *models.User, fileID int) (
 		return "", err
 	}
 
-	if file.IsPrivate == true && sender.ID != file.UploadedBy {
-		return "", fiber.NewError(fiber.StatusNotFound, "ERR_IMAGE_NOTFOUND")
-	}
-
 	err = s.repo.WithTx(ctx.Context(), func(tx bun.Tx) (err error) {
 		file.Downloads = file.Downloads + 1
 

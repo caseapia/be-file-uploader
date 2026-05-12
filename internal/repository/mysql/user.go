@@ -38,8 +38,6 @@ func (r *Repository) LookupUserByPartOfName(ctx context.Context, name string) ([
 	err := r.DB.NewSelect().
 		Model(&users).
 		Where("username LIKE ?", "%"+name+"%").
-		Relation("ActiveRestriction").
-		Relation("ActiveRestriction.Moderator").
 		Scan(ctx)
 	return users, err
 }

@@ -1,7 +1,6 @@
 package models
 
 import (
-	"strings"
 	"time"
 
 	"be-file-uploader/internal/models/relations"
@@ -69,11 +68,6 @@ type FileGrants struct {
 // }
 
 func (f *File) ResolveURL(sender *User) {
-	if !strings.Contains(f.MimeType, "image") {
-		f.URL = ""
-		return
-	}
-
 	if f.IsPrivate && !f.CanAccess(sender) {
 		f.URL = ""
 	}
