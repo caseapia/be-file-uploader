@@ -287,9 +287,7 @@ func (h *Handler) ShareXUpload(ctx fiber.Ctx) error {
 		return err
 	}
 
-	return ctx.JSON(fiber.Map{
-		"url": img.URL,
-	})
+	return validation.Response(ctx, fiber.StatusOK, fiber.Map{"url": img.URL})
 }
 
 func (h *Handler) GrantAccess(ctx fiber.Ctx) error {
