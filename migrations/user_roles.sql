@@ -6,6 +6,10 @@ create table if not exists user_roles
     comment 'роли пользователей';
 
 alter table user_roles
+    add constraint `PRIMARY`
+        primary key (user_id, role_id);
+
+alter table user_roles
     add constraint user_roles_users_id_fk
         foreign key (user_id) references users (id)
             on update cascade on delete cascade;

@@ -5,11 +5,13 @@ create table if not exists albums
     name       varchar(64)                          not null,
     created_by int                                  not null,
     created_at datetime   default CURRENT_TIMESTAMP not null,
-    updated_at datetime                             not null,
+    updated_at datetime   default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP,
     is_public  tinyint(1) default 0                 not null
-);
+)
+    charset = utf8mb4;
 
 alter table albums
-    add constraint albums_pk_2
-        unique (id);
+    add constraint fk_created_by
+        foreign key (created_by) references users (id)
+            on delete cascade;
 

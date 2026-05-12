@@ -1,14 +1,14 @@
 create table if not exists sessions
 (
-    id             varchar(36)                            not null,
-    user_id        int                                    not null,
-    ip_address     varchar(45)                            not null,
-    user_agent     text                                   not null,
-    is_active      tinyint(1) default 1                   not null,
-    created_at     datetime   default CURRENT_TIMESTAMP   not null,
-    expires_at     datetime                               not null,
-    last_active_at datetime   default CURRENT_TIMESTAMP   not null,
-    refresh_hash   varchar(64)                            not null
+    id           varchar(36)                          not null,
+    user_id      int                                  not null,
+    ip_address   varchar(45)                          not null,
+    user_agent   text                                 not null,
+    is_active    tinyint(1) default 1                 not null,
+    created_at   datetime   default CURRENT_TIMESTAMP not null,
+    expires_at   datetime                             not null,
+    refresh_hash varchar(64)                          not null,
+    geo_string   text                                 null
 );
 
 create index sessions_id_index
@@ -26,5 +26,8 @@ alter table sessions
 
 alter table sessions
     add constraint id
+        unique (id);
+
+add constraint id
         unique (id);
 
