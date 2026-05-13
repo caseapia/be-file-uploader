@@ -293,10 +293,6 @@ Several handlers parse `:id` using `strconv.Atoi` and ignore conversion errors, 
 
 `SearchOwnFiles` query references grant alias `fg`. Contributors setting up a fresh DB should verify `files_grants` schema compatibility with current query behavior.
 
-### ShareX upload response is custom
-
-`POST /public/storage/upload/sharex` returns `{ "url": "..." }` directly instead of using the standard `response` wrapper.
-
 ## Contribution Notes
 
 When adding or changing an endpoint:
