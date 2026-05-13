@@ -10,14 +10,14 @@ This folder contains developer-facing and contributor-facing documentation for `
 
 ## Documents
 
-| File                                                                               | Purpose                                                                                         |
-|------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------|
+| File                                                                               | Purpose                                                                                           |
+|------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
 | [getting-started.md](getting-started.md)                                           | Local setup, infrastructure assumptions, environment variables, runtime flags, and first-run flow |
-| [api-reference.md](api-reference.md)                                               | Full route catalog, request/response contracts, auth rules, and permission gates              |
-| [authentication.md](authentication.md)                                             | JWT + refresh-token flow, session lifecycle, middleware behavior, and ShareX token auth        |
-| [errors.md](errors.md)                                                             | Response envelopes, validation behavior, and current error catalog by feature area             |
-| [architecture.md](architecture.md)                                                 | Project structure, request flow, persistence model, permission model, and implementation caveats |
-| [insomnia/be-file-uploader.insomnia.json](insomnia (outdated)/be-file-uploader.insomnia.json) | Importable Insomnia collection aligned with current routes                                      |
+| [api-reference.md](api-reference.md)                                               | Full route catalog, request/response contracts, auth rules, and permission gates                  |
+| [authentication.md](authentication.md)                                             | JWT + refresh-token flow, session lifecycle, middleware behavior, and ShareX token auth           |
+| [errors.md](errors.md)                                                             | Response envelopes, validation behavior, and current error catalog by feature area                |
+| [architecture.md](architecture.md)                                                 | Project structure, request flow, persistence model, permission model, and implementation caveats  |
+| [insomnia/be-file-uploader.insomnia.json](insomnia/be-file-uploader.insomnia.json) | Importable Insomnia collection aligned with current routes                                        |
 
 ## What This Service Does
 
@@ -37,19 +37,19 @@ This folder contains developer-facing and contributor-facing documentation for `
 
 Base prefix: `/v1/api`
 
-| Scope                 | Routes |
-|-----------------------|--------|
-| Public auth           | `POST /public/auth/register`, `POST /public/auth/login`, `POST /public/auth/refresh` |
-| Public utility        | `GET /public/ping`, `GET /public/roadmap/list`, `POST /public/storage/upload/sharex` |
-| Private auth          | `DELETE /private/auth/logout` |
-| Private user          | `GET /private/user/me`, `GET /private/user/lookup/:id`, `GET /private/user/shareX/generate` |
-| Private user admin    | `GET /private/user/admin/users`, `PUT /private/user/admin/role/add`, `DELETE /private/user/admin/role/delete`, `PATCH /private/user/admin/storage-limit/update`, `PATCH /private/user/admin/verify/:id`, `DELETE /private/user/admin/shareX/reset/:id` |
-| Private storage       | `POST /private/storage/upload/init`, `POST /private/storage/upload/chunk`, `POST /private/storage/upload/complete`, `POST /private/storage/action/delete`, `GET /private/storage/my`, `GET /private/storage/list`, `GET /private/storage/list/:id`, `GET /private/storage/post/:id` |
-| Private storage actions | `PUT /private/storage/action/album/put`, `DELETE /private/storage/action/album/delete`, `PATCH /private/storage/action/like/:id`, `DELETE /private/storage/action/likeRemove/:id`, `GET /private/storage/action/download/:id`, `POST /private/storage/action/addComment` |
-| Private albums        | `POST /private/album/action/create`, `DELETE /private/album/action/delete/:id`, `GET /private/album/lookup/:id`, `GET /private/album/lookupAll` |
-| Private roles admin   | `GET /private/roles/admin/all`, `POST /private/roles/admin/create`, `PATCH /private/roles/admin/edit`, `DELETE /private/roles/admin/delete` |
-| Private notifications | `GET /private/notifications/my`, `PATCH /private/notifications/action/read/:id` |
-| Private roadmap admin | `POST /private/roadmap/admin/task/add`, `PATCH /private/roadmap/admin/task/edit` |
+| Scope                   | Routes                                                                                                                                                                                                                                                                              |
+|-------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Public auth             | `POST /public/auth/register`, `POST /public/auth/login`, `POST /public/auth/refresh`                                                                                                                                                                                                |
+| Public utility          | `GET /public/ping`, `GET /public/roadmap/list`, `POST /public/storage/upload/sharex`                                                                                                                                                                                                |
+| Private auth            | `DELETE /private/auth/logout`                                                                                                                                                                                                                                                       |
+| Private user            | `GET /private/user/me`, `GET /private/user/lookup/:id`, `GET /private/user/shareX/generate`                                                                                                                                                                                         |
+| Private user admin      | `GET /private/user/admin/users`, `PUT /private/user/admin/role/add`, `DELETE /private/user/admin/role/delete`, `PATCH /private/user/admin/storage-limit/update`, `PATCH /private/user/admin/verify/:id`, `DELETE /private/user/admin/shareX/reset/:id`                              |
+| Private storage         | `POST /private/storage/upload/init`, `POST /private/storage/upload/chunk`, `POST /private/storage/upload/complete`, `POST /private/storage/action/delete`, `GET /private/storage/my`, `GET /private/storage/list`, `GET /private/storage/list/:id`, `GET /private/storage/post/:id` |
+| Private storage actions | `PUT /private/storage/action/album/put`, `DELETE /private/storage/action/album/delete`, `PATCH /private/storage/action/like/:id`, `DELETE /private/storage/action/likeRemove/:id`, `GET /private/storage/action/download/:id`, `POST /private/storage/action/addComment`            |
+| Private albums          | `POST /private/album/action/create`, `DELETE /private/album/action/delete/:id`, `GET /private/album/lookup/:id`, `GET /private/album/lookupAll`                                                                                                                                     |
+| Private roles admin     | `GET /private/roles/admin/all`, `POST /private/roles/admin/create`, `PATCH /private/roles/admin/edit`, `DELETE /private/roles/admin/delete`                                                                                                                                         |
+| Private notifications   | `GET /private/notifications/my`, `PATCH /private/notifications/action/read/:id`                                                                                                                                                                                                     |
+| Private roadmap admin   | `POST /private/roadmap/admin/task/add`, `PATCH /private/roadmap/admin/task/edit`                                                                                                                                                                                                    |
 
 ## Response Conventions
 

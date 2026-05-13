@@ -42,7 +42,7 @@ http://localhost:8080
 
 Import:
 
-- [docs/insomnia/be-file-uploader.insomnia.json](docs/insomnia (outdated)/be-file-uploader.insomnia.json)
+- [docs/insomnia/be-file-uploader.insomnia.json](docs/insomnia/be-file-uploader.insomnia.json)
 
 The collection is aligned with the current route layout under `/v1/api/public/*` and `/v1/api/private/*`.
 
