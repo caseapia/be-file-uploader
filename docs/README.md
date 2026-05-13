@@ -81,9 +81,7 @@ Unhandled internal failures use:
 
 ## Important Caveats
 
-- Registration no longer consumes an invite code; it creates a user and assigns role ID `1`.
+- Registration no longer consumes an invitation code; it creates a user and assigns role ID `1`.
 - Access-token middleware accepts `Authorization: Bearer <jwt>` and cookie `access_token`.
 - Access-token lifetime is currently `7 days` (same duration as session expiry).
 - Redis env vars exist, but Redis is not currently initialized by `CreateDatabase()`.
-- `migrations` does not include a `roadmap` table migration; contributors need to create it manually when setting up from scratch.
-- `files_grants` is registered in Bun models but has no migration file in `migrations`; contributors testing `/private/storage/my` should verify schema compatibility.
